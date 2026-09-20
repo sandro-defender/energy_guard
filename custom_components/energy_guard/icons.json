@@ -1,0 +1,10 @@
+{
+  "services": {
+    "scan_statistics": "mdi:magnify",
+    "repair_statistics": "mdi:auto-fix",
+    "calibrate_utility_meter": "mdi:gauge",
+    "clear_statistics": "mdi:delete-forever",
+    "export_repair_report": "mdi:file-document-outline",
+    "export_templates": "mdi:file-code"
+  }
+}
