@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import struct
 from pathlib import Path
 
 import pytest
@@ -280,3 +281,179 @@ def test_repository_urls_point_at_the_real_project() -> None:
     ):
         text = (REPO_ROOT / relative).read_text()
         assert "your-github-username" not in text, relative
+
+
+def test_every_github_link_points_at_the_real_project() -> None:
+    """No file links to any repository but the real one (regression test).
+
+    The device page once opened a wrong-cased placeholder repository because
+    ``hub.py`` carried its own copy of the URL.  Every link is derived from
+    ``const.REPOSITORY_URL`` now; this sweep fails on any other owner/name.
+    """
+    from custom_components.energy_guard.const import REPOSITORY_URL
+
+    link = re.compile(r"https?://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)")
+    owner, _, name = REPOSITORY_URL.partition("https://github.com/")[2].partition("/")
+    assert owner, REPOSITORY_URL
+    assert name, REPOSITORY_URL
+    skipped_dirs = {
+        ".git",
+        "__pycache__",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".venv",
+        "node_modules",
+    }
+    checked = 0
+    for path in sorted(REPO_ROOT.rglob("*")):
+        if not path.is_file() or path.suffix not in {
+            ".py",
+            ".json",
+            ".md",
+            ".yaml",
+            ".yml",
+            ".js",
+            ".toml",
+        }:
+            continue
+        if skipped_dirs & set(path.parts):
+            continue
+        text = path.read_text(encoding="utf-8")
+        if path != Path(__file__):  # this test names the placeholder itself
+            assert "your-github-username" not in text, path
+        for found_owner, found_name in link.findall(text):
+            checked += 1
+            found_name = found_name.removesuffix(".git")  # clone URLs
+            assert (found_owner, found_name) == (owner, name), (
+                f"{path}: github.com/{found_owner}/{found_name}"
+            )
+    assert checked, "the sweep should see at least one repository link"
+
+
+def test_every_form_field_is_labelled_and_described(strings: dict) -> None:
+    """Each schema key has a label and a 'what is it' description.
+
+    This is the check ``selectors.py`` promises: a form field without a label
+    shows its raw key in Home Assistant, and one without a description leaves
+    the user guessing.  The edit forms mirror their add forms exactly.
+    """
+    from custom_components.energy_guard.selectors import (
+        backups_schema,
+        cost_schema,
+        derived_schema,
+        detection_schema,
+        protected_schema,
+        statistics_schema,
+        utility_meter_schema,
+    )
+
+    config_steps = strings["config"]["step"]
+    options_steps = strings["options"]["step"]
+    mapping = {
+        protected_schema: ("protected_sensors_add", "protected_sensors_edit_form"),
+        derived_schema: ("derived_sensors_add", "derived_sensors_edit_form"),
+        utility_meter_schema: ("utility_meters_add", "utility_meters_edit_form"),
+        detection_schema: ("detection_rules",),
+        statistics_schema: ("statistics_repair",),
+        cost_schema: ("cost_repair",),
+        backups_schema: ("backups_reports",),
+    }
+    for schema_fn, steps in mapping.items():
+        keys = {str(marker) for marker in schema_fn().schema}
+        for step in steps:
+            node = options_steps[step]
+            assert keys <= set(node.get("data", {})), f"{step} misses a label"
+            assert keys <= set(node.get("data_description", {})), (
+                f"{step} misses a description"
+            )
+    # The first-run detection step uses the same schema, so it needs the same
+    # texts.
+    detection_keys = {str(marker) for marker in detection_schema().schema}
+    node = config_steps["detection"]
+    assert detection_keys <= set(node.get("data", {})), "detection misses a label"
+    assert detection_keys <= set(node.get("data_description", {})), (
+        "detection misses a description"
+    )
+    # Edit forms never drift from their add forms.
+    for add, edit in (
+        ("protected_sensors_add", "protected_sensors_edit_form"),
+        ("derived_sensors_add", "derived_sensors_edit_form"),
+        ("utility_meters_add", "utility_meters_edit_form"),
+    ):
+        assert options_steps[edit]["data"] == options_steps[add]["data"], edit
+        assert (
+            options_steps[edit]["data_description"]
+            == options_steps[add]["data_description"]
+        ), edit
+
+
+def test_selector_option_labels_cover_the_dropdowns(strings: dict) -> None:
+    """The translated dropdown options match the selectors that use them."""
+    from custom_components.energy_guard.const import DERIVED_MODES, SCAN_SCOPES
+    from custom_components.energy_guard.selectors import MODE_OPTIONS
+
+    assert set(strings["selector"]["scan_scope"]["options"]) == set(SCAN_SCOPES)
+    assert set(strings["selector"]["mode"]["options"]) == set(DERIVED_MODES)
+    assert {option["value"] for option in MODE_OPTIONS} == set(DERIVED_MODES)
+    for group in ("scan_scope", "mode"):
+        for value, label in strings["selector"][group]["options"].items():
+            assert label, (group, value)
+
+
+def test_service_icons_cover_every_service() -> None:
+    """icons.json gives every service an icon for the automation editors.
+
+    Entity icons stay where they are (device classes and the state-dependent
+    ``_attr_icon`` properties, which are still supported); the icons file only
+    needs the services, which have no other way to get one.
+    """
+    from custom_components.energy_guard.const import SERVICE_NAMES
+
+    icons = json.loads((COMPONENT_DIR / "icons.json").read_text())
+    assert set(icons["services"]) == set(SERVICE_NAMES)
+    for service, icon in icons["services"].items():
+        assert re.fullmatch(r"mdi:[a-z0-9-]+", icon), (service, icon)
+
+
+def test_brand_images_are_valid_pngs() -> None:
+    """The brand/ folder carries what Home Assistant 2026.3+ and HACS read.
+
+    Local brand images take priority over the brands CDN; ``icon.png`` alone
+    is enough for the logo to appear, the ``@2x`` variants keep retina
+    displays crisp.  No dark variants: the artwork has a solid background, so
+    it works on light and dark themes as-is.
+    """
+    brand = COMPONENT_DIR / "brand"
+    expected = {
+        "icon.png": (256, 256),
+        "icon@2x.png": (512, 512),
+        "logo.png": (600, 200),
+        "logo@2x.png": (1200, 400),
+    }
+    for name, size in expected.items():
+        data = (brand / name).read_bytes()
+        assert len(data) > 1024, f"{name} looks like a placeholder"
+        assert data[:8] == b"\x89PNG\r\n\x1a\n", f"{name} is not a PNG"
+        width, height = struct.unpack(">II", data[16:24])
+        assert (width, height) == size, f"{name} is {width}x{height}"
+
+
+def test_brand_artwork_matches_across_densities() -> None:
+    """icon.png is the 512 artwork downscaled, with transparent corners.
+
+    Home Assistant picks one or the other by display density, so a different
+    framing would visibly change the logo between screens.
+    """
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    brand = COMPONENT_DIR / "brand"
+    small = Image.open(brand / "icon.png").convert("RGBA")
+    big = (
+        Image.open(brand / "icon@2x.png")
+        .convert("RGBA")
+        .resize((256, 256), Image.LANCZOS)
+    )
+    assert small.size == big.size == (256, 256)
+    assert list(small.getdata()) == list(big.getdata())
+    assert small.getpixel((0, 0))[3] == 0, "icon corners must be transparent"

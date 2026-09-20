@@ -4,6 +4,47 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Brand assets** (`custom_components/energy_guard/brand/`): `icon.png`,
+  `icon@2x.png`, `logo.png` and `logo@2x.png`, shipped inside the integration
+  so Home Assistant 2026.3+ shows them on the Integrations page, the device
+  page and everywhere else (local brand images take priority over the brands
+  CDN). The README shows the logo and the release/test badges.
+- **Service icons** (`icons.json`): every `energy_guard.*` service now has an
+  icon in the automation and script editors. Entity icons are unchanged
+  (device classes plus the state-dependent icon properties).
+- **Prefilled forms with help texts**: every field of every options-flow form
+  now has a label and a "what is it" description (including the edit forms,
+  which previously showed raw keys), and the configuration panel opens new
+  definitions prefilled with the documented defaults plus a help line under
+  every input. Covered by `test_every_form_field_is_labelled_and_described`,
+  `test_panel_fields_prefill_the_schema_defaults_and_describe_everything` and
+  the extended Node smoke test.
+- **Translated dropdown labels** for the derived-sensor mode
+  (`selector.mode`), matching the scan-scope labels.
+- **Dashboard home in the configuration panel**: the Overview tab is now a
+  status dashboard - an issue hero, KPI cards with sparklines, per-day
+  blocked-readings and false-energy charts, an events-by-kind donut, a
+  recent-activity feed, quick actions and a managed-definitions snapshot,
+  all drawn as dependency-free inline SVG that follows the Home Assistant
+  theme. The numbers come from a new read-only admin-only WebSocket command
+  (`energy_guard/config/dashboard`, aggregated in `dashboard.py` from the
+  kept diagnostic log), totals are labelled as logged/bounded, and the
+  Repair tab lists candidates as preview → confirm cards with evidence
+  chips. Covered by `tests/test_dashboard_data.py` and the extended Node
+  smoke test.
+
+### Fixed
+
+- **Wrong repository link on the device page**: the "Visit" link opened a
+  placeholder repository because `hub.py` carried its own copy of the URL.
+  Every user-facing link is now derived from `const.REPOSITORY_URL`, and
+  `test_every_github_link_points_at_the_real_project` sweeps the whole
+  repository for any other `github.com` owner/name.
+
 ## [1.1.0] - 2026-09-20
 
 ### Added
@@ -161,5 +202,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Never reads or edits user YAML or template files; only integration-owned
   entities and configuration are managed.
 
+[unreleased]: https://github.com/sandro-defender/energy_guard/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/sandro-defender/energy_guard/releases/tag/v1.1.0
 [1.0.0]: https://github.com/sandro-defender/energy_guard/releases/tag/v1.0.0

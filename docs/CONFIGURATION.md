@@ -16,7 +16,7 @@ the recommended way to configure the integration.
 
 | Tab | Content |
 | --- | --- |
-| **Overview** | Status of `binary_sensor.energy_guard_data_issue`, the three read-only scan buttons, counters and pointers to the other tabs |
+| **Overview** | the dashboard home: an issue status hero, blocked-readings / false-energy / last-scan KPI cards with sparklines, per-day blocked-readings and false-energy charts, an events-by-kind donut, a recent-activity feed, quick actions, a managed-definitions snapshot, and the honesty note that totals cover the kept diagnostic log (14 days, newest 250 events) |
 | **Protected** | list / add / edit / enable / disable / delete protected sensors (source sensor, unit, multiplier, offset, zero threshold, confirmation scans, recovery hold, grace period, decrease and jump rules, max value, precision) |
 | **Derived** | the same for derived sensors (mode sum / difference / phase split, sources, total & parts, require-all-sources) |
 | **Meters** | utility meters that may be calibrated (meter entity, source, cycle, baseline) |
@@ -29,6 +29,12 @@ the recommended way to configure the integration.
 
 Nothing in the panel is required for protection to work: it is a front end for
 the configuration and the existing services.
+
+New definitions open prefilled with the documented defaults (the same values
+the options flow would apply), and every input has a short help line under it
+explaining what it does. Fields without a sensible default - names, the entity
+pickers and optional extras such as the plausibility maximum - intentionally
+start empty.
 
 ## How it is built (for maintainers)
 
@@ -69,6 +75,7 @@ with a message written for a human ("A name is required.", "… is already taken
 | `energy_guard/config/set` | `section`, `data` | validated+merged section, `stored_under`, `reloaded` |
 | `energy_guard/config/definition` | `section`, `action` (`add`/`update`/`toggle`/`delete`), `definition_id`, `data`, `confirm` | the stored `item` (or `null` after a delete) |
 | `energy_guard/config/review` | – | `candidates`, `cost_suggestions`, scan state, recent `repairs`/`calibrations` |
+| `energy_guard/config/dashboard` | – | `window_days`, `protection` totals, 14-day `points`, `by_kind`, the `recent` feed, `scan`, `counts`, `actions` (read-only aggregation of the kept diagnostic log) |
 | `energy_guard/config/files` | – | `backups`, `reports` (name, size, mtime - **never a path**) |
 | `energy_guard/config/templates` | – | the generated YAML |
 | `energy_guard/config/subscribe` | – | pushes `{"entry_id", "config"}` after every change made through the API |

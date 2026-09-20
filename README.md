@@ -1,6 +1,13 @@
+<p align="center">
+  <img src="custom_components/energy_guard/brand/logo.png" alt="Energy Guard - Protect your Energy Dashboard" width="600">
+</p>
+
 # Energy Guard
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/sandro-defender/energy_guard)
+[![GitHub Release](https://img.shields.io/github/release/sandro-defender/energy_guard.svg)](https://github.com/sandro-defender/energy_guard/releases)
+[![Tests](https://img.shields.io/github/actions/workflow/status/sandro-defender/energy_guard/tests.yml?label=tests)](https://github.com/sandro-defender/energy_guard/actions)
+[![Home Assistant](https://img.shields.io/badge/Home_Assistant-2025.5+-41BDF5.svg)](https://www.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Energy Guard protects your Home Assistant Energy Dashboard from reconnect
@@ -565,7 +572,7 @@ value returned by the repair) or restore the affected rows from the JSON backup.
 ```bash
 uv venv --python 3.14 .venv
 uv pip install --python .venv/bin/python -r requirements_test.txt
-.venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL   # 169 tests
+.venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL   # 183 tests
 .venv/bin/ruff check custom_components tests
 .venv/bin/ruff format --check custom_components tests
 ```
@@ -585,7 +592,8 @@ documentation, no direct database access, no secrets) are enforced by
 valid YAML, read-only, free of dead entity references and renders all of its
 templates, and `tests/test_panel.py` plus `tests/test_websocket_api.py` keep the
 configuration page admin-only, confirmation-gated and free of credential or
-path handling.
+path handling, while `tests/test_dashboard_data.py` keeps the Overview
+aggregation read-only and bounded to the kept diagnostic log.
 
 Contributors: read [CONTRIBUTING.md](CONTRIBUTING.md) (the five rules a change
 may not weaken) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (setup, test map,

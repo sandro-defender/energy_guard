@@ -39,6 +39,7 @@ from custom_components.energy_guard.const import (
 from custom_components.energy_guard.hub import get_hub
 from custom_components.energy_guard.websocket import (
     WS_CHOICES,
+    WS_DASHBOARD,
     WS_DEFINITION,
     WS_FILES,
     WS_GET,
@@ -133,6 +134,37 @@ async def test_choices_and_review_and_files_and_templates(
     assert "Grid import protected" in templates["result"]["yaml"]
 
 
+async def test_dashboard_returns_the_dashboard_data(
+    hass: HomeAssistant, hass_ws_client
+) -> None:
+    """`config/dashboard` answers with the aggregated, read-only dashboard."""
+    entry = await _setup(hass)
+    client = await _connect(hass, hass_ws_client)
+
+    response = await _call(client, {"id": 6, "type": WS_DASHBOARD})
+    assert response["success"] is True
+    result = response["result"]
+    assert result["entry_id"] == entry.entry_id
+    dashboard = result["dashboard"]
+    for key in (
+        "generated_at",
+        "protection",
+        "points",
+        "by_kind",
+        "recent",
+        "scan",
+        "counts",
+        "actions",
+    ):
+        assert key in dashboard, key
+    assert dashboard["counts"]["protected"] == 1
+    assert dashboard["counts"]["protected_enabled"] == 1
+    # Nothing about the request changed the hub: the command is read-only.
+    hub = get_hub(hass, entry.entry_id)
+    assert hub is not None
+    assert dashboard["protection"]["events_total"] == len(hub.events)
+
+
 # ---------------------------------------------------------------------------
 # admin only
 # ---------------------------------------------------------------------------
@@ -144,7 +176,8 @@ async def test_every_command_is_admin_only(
     client = await _connect(hass, hass_ws_client, hass_read_only_access_token)
 
     for msg_id, command in enumerate(
-        (WS_GET, WS_CHOICES, WS_REVIEW, WS_FILES, WS_TEMPLATES), start=10
+        (WS_GET, WS_CHOICES, WS_REVIEW, WS_DASHBOARD, WS_FILES, WS_TEMPLATES),
+        start=10,
     ):
         response = await _call(client, {"id": msg_id, "type": command})
         assert response["success"] is False, command

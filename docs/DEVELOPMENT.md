@@ -84,6 +84,7 @@ Never point that at your production configuration directory.
 | `tests/test_models.py` | type normalisation of stored configuration (UI floats in integer fields), non-finite rejection, backup pruning |
 | `tests/test_contracts.py` | repository contracts: manifest, `hacs.json`, services <-> `services.yaml` <-> `strings.json`, translations, docs, README, no direct database access, no secrets |
 | `tests/test_dashboard.py` | the shipped dashboard: valid YAML, only read-only card actions, every referenced Energy Guard entity exists after setup, example entities match the README, all templates render (clean state and open-issue state) |
+| `tests/test_dashboard_data.py` | the Overview aggregation: blocked totals, the 14-day chart window, the capped newest-first feed, scan/counts/action blocks, kind-label fallback, and that it never touches stored configuration |
 
 ### Recorder test rules (do not fight them)
 
@@ -165,7 +166,13 @@ this file below; they were all found the hard way.
    block to `strings.json` + `translations/en.json` (title required).
 2. Build the form with a helper in `selectors.py`; keep list sections as lists of
    dicts so a future version can add fields without breaking stored options.
-3. Add a step test in `test_flows_and_diagnostics.py`.
+3. Give every field a `data` label and a `data_description` ("what is it") in
+   both translation files - `test_every_form_field_is_labelled_and_described`
+   fails otherwise. Edit forms mirror their add forms exactly.
+4. Add the field to the panel's `FIELDS` table with the same default and a
+   `hint` - `test_panel_fields_prefill_the_schema_defaults_and_describe_everything`
+   compares the default against the schema default.
+5. Add a step test in `test_flows_and_diagnostics.py`.
 
 ### A change to the stored configuration
 
@@ -195,6 +202,24 @@ Energy Dashboard configuration, templates and automations reference them.
 * The JavaScript is served as-is (no build step).  Keep it dependency-free, keep
   `window.confirm(...)` before every `confirm: true`/`confirm_cost: true`, and
   keep `tests/test_panel.py`'s static safety checks passing.
+* New definition forms open prefilled: `_field` renders `field.default` when no
+  value is stored, every descriptor has a `hint`, and identity/optional fields
+  intentionally carry no default (listed in the test's `no_prefill` map).
+* The Overview dashboard aggregates in Python (`dashboard.py`), not in the
+  browser: the panel only buckets points into local days and draws
+  dependency-free inline SVG. Totals are labelled as logged/bounded and the
+  aggregation must stay read-only (it never touches stored configuration).
+* `html` is `String.raw`: backslash escapes stay literal inside
+  ``html`...` `` - write punctuation (·, …, –) as real characters there, or
+  produce it in nested plain template literals (which do process escapes).
+* User-facing links come from `const.REPOSITORY_URL` only - never hardcode a
+  repository URL in another module.  `test_every_github_link_points_at_the_real_project`
+  sweeps the repo for any other `github.com` owner/name.
+* Brand images live in `custom_components/energy_guard/brand/` (`icon.png` 256,
+  `icon@2x.png` 512, plus the horizontal logos); regenerate both densities from
+  the same artwork and keep the corners transparent.  Service icons live in
+  `icons.json` (entity icons stay on the entities via device classes).  Both
+  are pinned by contract tests.
 
 ### A change to the scan scope or the statistics discovery
 

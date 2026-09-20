@@ -204,6 +204,7 @@ def test_panel_only_uses_commands_that_exist() -> None:
         ws_module.WS_DEFINITION,
         ws_module.WS_CHOICES,
         ws_module.WS_REVIEW,
+        ws_module.WS_DASHBOARD,
         ws_module.WS_FILES,
         ws_module.WS_TEMPLATES,
         ws_module.WS_SUBSCRIBE,
@@ -320,6 +321,127 @@ def test_panel_form_fields_match_the_real_schemas() -> None:
         allowed = {str(key) for key in schemas[section]().schema}
         unknown = [key for key in keys if key not in allowed]
         assert not unknown, f"{section}: {unknown}"
+
+
+def _panel_field_lines() -> dict[str, list[tuple[str, str | None, str | None]]]:
+    """Return ``{section: [(key, default, hint)]}`` parsed from FIELDS.
+
+    Each descriptor is a single ``{ key: ... }`` line; the default is the raw
+    JavaScript literal (``None`` when the field carries none) and the hint is
+    the shown help text (``None`` when missing).
+    """
+    source = _code()
+    block = source[source.index("const FIELDS = {") : source.index("const CARD = `")]
+    current: str | None = None
+    found: dict[str, list[tuple[str, str | None, str | None]]] = {}
+    for line in block.splitlines():
+        stripped = line.strip()
+        if stripped.endswith(": ["):
+            current = stripped.split(":")[0]
+            found[current] = []
+        elif current and stripped.startswith("{ key:"):
+            key = stripped.split('"')[1]
+            default_match = re.search(
+                r"default:\s*(true|false|\"[^\"]*\"|-?[\d.]+)", stripped
+            )
+            hint_match = re.search(r"hint:\s*\"([^\"]*)\"", stripped)
+            found[current].append(
+                (
+                    key,
+                    default_match.group(1) if default_match else None,
+                    hint_match.group(1) if hint_match else None,
+                )
+            )
+    return found
+
+
+def test_panel_fields_prefill_the_schema_defaults_and_describe_everything() -> None:
+    """New definitions open prefilled and no field is unexplained.
+
+    Every panel field either renders exactly the default its backend schema
+    would apply, or is explicitly listed below as intentionally empty
+    (identity fields such as the name, entity pickers and optional extras).
+    And every field carries the short help text shown under its input.
+    """
+    import voluptuous as vol
+
+    from custom_components.energy_guard.selectors import (
+        backups_schema,
+        cost_schema,
+        derived_schema,
+        detection_schema,
+        protected_schema,
+        statistics_schema,
+        utility_meter_schema,
+    )
+
+    schemas = {
+        "protected_sensors": protected_schema,
+        "derived_sensors": derived_schema,
+        "utility_meters": utility_meter_schema,
+        "detection_rules": detection_schema,
+        "statistics_repair": statistics_schema,
+        "cost_repair": cost_schema,
+        "backups_reports": backups_schema,
+    }
+    # Fields that must stay empty in a new form (a default would be wrong, not
+    # just missing: names/entity pickers have no sensible default and optional
+    # extras must visibly be "not set").
+    no_prefill: dict[str, set[str]] = {
+        "protected_sensors": {"name", "source_entity_id", "max_value"},
+        "derived_sensors": {
+            "name",
+            "source_entity_ids",
+            "total_entity_id",
+            "part_entity_ids",
+        },
+        "utility_meters": {
+            "name",
+            "utility_meter_entity_id",
+            "source_entity_id",
+            "cycle",
+            "baseline_at",
+            "baseline_value",
+        },
+        "detection_rules": set(),
+        "statistics_repair": set(),
+        "cost_repair": {
+            "energy_statistic_id",
+            "cost_statistic_id",
+            "price_entity_id",
+        },
+        "backups_reports": set(),
+    }
+
+    def _schema_defaults(schema_fn) -> dict[str, object]:
+        """Return ``{key: default}`` of a schema (factories resolved)."""
+        resolved = {}
+        for marker in schema_fn().schema:
+            default = marker.default
+            resolved[str(marker)] = (
+                default() if callable(default) else default  # vol factories
+            )
+        return resolved
+
+    found = _panel_field_lines()
+    assert set(found) == set(schemas), set(found) ^ set(schemas)
+    for section, fields in found.items():
+        schema_defaults = _schema_defaults(schemas[section])
+        for key, js_default, hint in fields:
+            assert hint, f"{section}.{key} needs the help text shown under it"
+            if key in no_prefill[section]:
+                assert js_default is None, f"{section}.{key} must stay empty"
+                continue
+            expected = schema_defaults[key]
+            assert expected is not vol.UNDEFINED, f"{section}.{key} has no default"
+            if isinstance(expected, bool):
+                assert js_default in ("true", "false"), f"{section}.{key}"
+                assert (js_default == "true") is expected, f"{section}.{key}"
+            elif isinstance(expected, (int, float)):
+                assert js_default is not None, f"{section}.{key} needs a default"
+                assert float(js_default) == float(expected), f"{section}.{key}"
+            else:
+                assert js_default == f'"{expected}"', f"{section}.{key}"
 
 
 def test_the_scan_buttons_are_read_only() -> None:
