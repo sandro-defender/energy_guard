@@ -1,8 +1,0 @@
-{
-  "name": "Energy Guard",
-  "content_in_root": false,
-  "render_readme": true,
-  "homeassistant": "2025.5.0",
-  "zip_release": false,
-  "hide_default_branch": false
-}
