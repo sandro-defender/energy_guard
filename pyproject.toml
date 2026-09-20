@@ -1,0 +1,50 @@
+[project]
+name = "energy-guard"
+version = "1.0.0"
+description = "Protect and repair Home Assistant Energy Dashboard statistics"
+readme = "README.md"
+requires-python = ">=3.13"
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+extend-exclude = ["custom_components/energy_guard/translations"]
+
+[tool.ruff.lint]
+select = [
+  "E",      # pycodestyle errors
+  "W",      # pycodestyle warnings
+  "F",      # pyflakes
+  "I",      # isort
+  "B",      # flake8-bugbear
+  "C4",     # flake8-comprehensions
+  "UP",     # pyupgrade
+  "SIM",    # flake8-simplify
+  "RUF",    # ruff specific
+  "ASYNC",  # flake8-async
+  "A",      # flake8-builtins
+  "T20",    # flake8-print
+  "PT",     # flake8-pytest-style
+]
+ignore = [
+  "D",       # docstrings are checked by review, not by ruff here
+  "ANN",
+  "E501",    # line length is handled by the formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components.energy_guard"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["SIM117", "PT011", "PT012", "A001"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["custom_components/energy_guard"]
