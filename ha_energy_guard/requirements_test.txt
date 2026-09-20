@@ -1,0 +1,5 @@
+# Test requirements for Energy Guard.
+# pytest-homeassistant-custom-component pins a matching Home Assistant version,
+# so installing it pulls in everything the tests need.
+pytest-homeassistant-custom-component==0.13.366
+freezegun
