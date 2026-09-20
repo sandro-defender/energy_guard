@@ -20,8 +20,13 @@ from .const import DATA_HUBS, DOMAIN, NAME, PLATFORMS, VERSION
 from .coordinator import EnergyGuardCoordinator
 from .hub import EnergyGuardHub, get_hubs
 from .migrations import async_migrate_entry
+from .panel import async_register_panel, async_unregister_panel
 from .repairs import async_delete_repair_issues
 from .services import async_register_services, async_unregister_services
+from .websocket import (
+    async_register_websocket_api,
+    async_unregister_websocket_api,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,6 +62,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = hub
 
     async_register_services(hass)
+    # The sidebar configuration panel is optional: it talks to this API, which
+    # uses exactly the same validation and storage as the options flow.
+    async_register_websocket_api(hass)
+    await async_register_panel(hass)
 
     # The first refresh is read-only and never raises: a missing recorder just
     # results in an empty scan result so that setup can continue.
@@ -99,4 +108,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await hub.coordinator.async_shutdown()
     if not hubs:
         async_unregister_services(hass)
+        async_unregister_websocket_api(hass)
+        await async_unregister_panel(hass)
     return True

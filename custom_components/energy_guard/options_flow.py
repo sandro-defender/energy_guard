@@ -34,20 +34,17 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
+from .config_api import clean_optional, taken_entity_ids
 from .const import (
     CONF_BACKUPS,
-    CONF_BASELINE_AT,
     CONF_COST,
-    CONF_CYCLE,
     CONF_DERIVED,
     CONF_DETECTION,
     CONF_ENABLED,
     CONF_ID,
-    CONF_MAX_VALUE,
     CONF_MODE,
     CONF_NAME,
     CONF_PARTS,
-    CONF_PRICE_ENTITY,
     CONF_PROTECTED,
     CONF_SCALE,
     CONF_SOURCE,
@@ -55,6 +52,15 @@ from .const import (
     CONF_TOTAL,
     CONF_UTILITY_METERS,
     MODE_PHASE_SPLIT,
+    SECTION_BACKUPS,
+    SECTION_COST,
+    SECTION_DERIVED,
+    SECTION_DETECTION,
+    SECTION_EXPORT,
+    SECTION_METERS,
+    SECTION_PROTECTED,
+    SECTION_REVIEW,
+    SECTION_STATISTICS,
     TEMPLATES_FILE,
 )
 from .export import render_templates
@@ -64,7 +70,6 @@ from .selectors import (
     cost_schema,
     derived_schema,
     detection_schema,
-    entity_id_for,
     name_in_use,
     protected_schema,
     statistics_schema,
@@ -72,16 +77,6 @@ from .selectors import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-SECTION_PROTECTED = "protected_sensors"
-SECTION_DERIVED = "derived_sensors"
-SECTION_METERS = "utility_meters"
-SECTION_DETECTION = "detection_rules"
-SECTION_STATISTICS = "statistics_repair"
-SECTION_COST = "cost_repair"
-SECTION_BACKUPS = "backups_reports"
-SECTION_REVIEW = "review"
-SECTION_EXPORT = "export_yaml"
 
 MENU_OPTIONS = [
     SECTION_PROTECTED,
@@ -169,25 +164,12 @@ class EnergyGuardOptionsFlow(OptionsFlowWithReload):
     ) -> list[str]:
         """Return entity ids a new/edited definition must not collide with.
 
-        Every entity the definition reads (its source, sources, total or parts)
-        and every other protected/derived sensor of this entry is taken: a name
-        that matches one of them would be renamed with a "_2" suffix by Home
-        Assistant instead of being used as-is, which is easy to pick by mistake
-        in the Energy Dashboard.
+        The rule itself lives in :mod:`config_api` so that the options flow and
+        the configuration panel cannot drift apart.
         """
-        taken: list[str] = []
-        for key in (CONF_SOURCE, CONF_TOTAL):
-            value = payload.get(key)
-            if value:
-                taken.append(str(value))
-        for key in (CONF_SOURCES, CONF_PARTS):
-            taken.extend(str(item) for item in (payload.get(key) or []))
-        for section in (CONF_PROTECTED, CONF_DERIVED):
-            for item in self._list(section):
-                if ignore_id is not None and item.get(CONF_ID) == ignore_id:
-                    continue
-                taken.append(entity_id_for(str(item.get(CONF_NAME) or "")))
-        return taken
+        return taken_entity_ids(
+            dict(self.config_entry.options), payload, ignore_id=ignore_id
+        )
 
     def _label(self, item: dict[str, Any]) -> str:
         """Return a display label for an item."""
@@ -195,19 +177,8 @@ class EnergyGuardOptionsFlow(OptionsFlowWithReload):
 
     @staticmethod
     def _clean_optional(payload: dict[str, Any]) -> dict[str, Any]:
-        """Turn empty strings into None and parse datetimes."""
-        cleaned = dict(payload)
-        for key in (CONF_MAX_VALUE, CONF_BASELINE_AT, CONF_CYCLE, CONF_PRICE_ENTITY):
-            value = cleaned.get(key)
-            if value in ("", None):
-                if key == CONF_MAX_VALUE:
-                    cleaned[key] = None
-            elif key == CONF_MAX_VALUE:
-                try:
-                    cleaned[key] = float(value)
-                except (TypeError, ValueError):
-                    cleaned[key] = None
-        return cleaned
+        """Turn empty strings into None and parse the numeric optionals."""
+        return clean_optional(payload)
 
     # ------------------------------------------------------------------
     # menu

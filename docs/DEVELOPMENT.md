@@ -26,7 +26,7 @@ every user.
 ## 2. Setting up a working copy
 
 ```bash
-git clone https://github.com/your-github-username/energy-guard.git
+git clone https://github.com/sandro-defender/energy_guard.git
 cd energy-guard
 uv venv --python 3.14 .venv
 uv pip install --python .venv/bin/python -r requirements_test.txt
@@ -77,8 +77,13 @@ Never point that at your production configuration directory.
 | `tests/test_backups.py` | backup file naming/content/checksum, pruning, backup failure is fatal |
 | `tests/test_flows_and_diagnostics.py` | config flow, options flow, diagnostics redaction, YAML export |
 | `tests/test_options_flow.py` | every options-flow section end to end: add/edit/toggle/delete, what gets stored, entity ids surviving an edit, and that all seven forms render |
+| `tests/test_websocket_api.py` | the panel's backend: admin gate, every read command, validation/merge/reload of settings, definition add/update/toggle/delete, name collisions, delete confirmation, subscriptions |
+| `tests/test_panel_js_smoke.py` | runs the panel JavaScript headlessly with Node (skipped without Node): escaping, labels, form reading, field descriptors |
+| `tests/test_panel.py` | panel registration is optional and admin-only, removal on unload, a failing registration is logged not fatal, and the served JavaScript only uses real commands and confirmed writes |
+| `tests/test_scan_scope.py` | the scan scope: discovery of unmanaged statistics, energy/all filters, the cap and its warning, explicit ids, and that a wide scan stays read-only |
 | `tests/test_models.py` | type normalisation of stored configuration (UI floats in integer fields), non-finite rejection, backup pruning |
 | `tests/test_contracts.py` | repository contracts: manifest, `hacs.json`, services <-> `services.yaml` <-> `strings.json`, translations, docs, README, no direct database access, no secrets |
+| `tests/test_dashboard.py` | the shipped dashboard: valid YAML, only read-only card actions, every referenced Energy Guard entity exists after setup, example entities match the README, all templates render (clean state and open-issue state) |
 
 ### Recorder test rules (do not fight them)
 
@@ -121,6 +126,8 @@ this file below; they were all found the hard way.
 ---
 
 ## 5. Where to make a change
+
+(Also see the repository layout table in [ARCHITECTURE.md](ARCHITECTURE.md).)
 
 ### A new guard rule / detection rule
 
@@ -171,6 +178,51 @@ this file below; they were all found the hard way.
 Entity ids and statistic ids must never change as part of a migration: users'
 Energy Dashboard configuration, templates and automations reference them.
 
+### A change to the configuration panel
+
+* **Never add a command without `@websocket_api.require_admin`.**  Every
+  command in `websocket.py` is admin-only; `tests/test_websocket_api.py` checks
+  it with a read-only user token and `tests/test_panel.py` checks the JavaScript.
+* **Never store configuration outside `config_api.py`.**  It is the single
+  validation/storage layer shared with the options flow (schemas, name
+  collisions, `clean_optional`, reload).  A change there affects both UIs.
+* The definition id of a command is `definition_id`, never `id`: Home Assistant
+  rejects a command that reuses the envelope's message id
+  (`expected str at 'id'. Got 40`).
+* The panel is optional: `panel.py` must never raise into `async_setup_entry`.
+  Anything that can fail (frontend missing, static path registration, the
+  `panel_custom` API) stays inside its try/except.
+* The JavaScript is served as-is (no build step).  Keep it dependency-free, keep
+  `window.confirm(...)` before every `confirm: true`/`confirm_cost: true`, and
+  keep `tests/test_panel.py`'s static safety checks passing.
+
+### A change to the scan scope or the statistics discovery
+
+* discovery lives in `detection.async_discover_statistic_ids`; it must stay
+  read-only and must always return the linked statistics **first**, so a capped
+  scan still covers what the user configured;
+* use `recorder_io.stored_unit()` for units (Home Assistant 2026.9 reports
+  `statistics_unit_of_measurement`, older versions `unit_of_measurement`);
+* a new scope value needs: `const.SCAN_SCOPES`, `services.yaml`,
+  `strings.json` + `translations/en.json` (identical), the `selector.scan_scope`
+  labels, `docs/SERVICES.md` and a case in `tests/test_scan_scope.py`.
+
+### A change that touches the dashboard
+
+`dashboards/energy_guard.yaml` is user-facing surface, even though it is only
+YAML:
+
+* run `tests/test_dashboard.py` - it fails when the file stops parsing, when a
+  card calls anything but the read-only `energy_guard.scan_statistics`, when a
+  referenced Energy Guard entity does not exist after setup, when an example
+  entity is not documented in the README, or when a Jinja template raises;
+* never add a repair/calibrate/clear button.  Those stay manual,
+  confirmation-gated calls printed as text ([SAFETY.md](SAFETY.md));
+* `state_attr()` needs **two** arguments in Home Assistant 2026.9
+  (`state_attr(entity, attribute)`); the one-argument form raises inside the
+  template renderer;
+* quote `"on"`/`"off"` in `conditions:` - unquoted YAML makes `on` a boolean.
+
 ### A new module
 
 Create it only when an existing module would otherwise need a fourth
@@ -194,6 +246,9 @@ test), no import of a higher layer (layering is described in
 | A form claims `Entity None is neither a valid entity ID` | `EntitySelector` rejects the `None` default of an *optional* field | use `OptionalEntitySelector` for optional entity fields, `required_field()` for required ones |
 | A UI configured protected sensor never gets a state (`TypeError: 'float' object cannot be interpreted as an integer`) | the number selectors store floats, `round(value, precision=3.0)` fails | `models._coerce` normalises stored values to the declared types (`tests/test_models.py`) |
 | The created entity is called `..._2` | the chosen name slugified to an entity id that is already taken (a source, a protected sensor, …) | `selectors.name_in_use` is checked in both flows; keep the `... protected` suffix in the name |
+| `TypeError: 'Panel' object is not subscriptable` | Home Assistant 2026.9 stores a `Panel` object in `hass.data[frontend.DATA_PANELS]` | read attributes (`.component_name`), not dict keys, and handle both |
+| The panel form offers a field the backend refuses (`not a valid option`) | the model has more fields than the schema (`scale` and `precision` exist in `SensorDefinition`, but the protected schema only carries `precision`) | compare `FIELDS` with `selectors.*_schema()` - `tests/test_panel.py::test_panel_form_fields_match_the_real_schemas` does exactly that |
+| `invalid_format: expected str at 'id'. Got 40` | a WebSocket command schema re-used the envelope's `id` key | name payload ids `definition_id` (or anything but `id`) |
 | `asyncio` warnings in CI only | test-only helpers (`async_block_till_done`) | keep them inside tests, not in the integration |
 
 ---
@@ -249,6 +304,11 @@ A change is ready when all of these hold:
 - [ ] `services.yaml`, `strings.json`, `translations/en.json`, the README and the
       docs under `docs/` match the code;
 - [ ] `CHANGELOG.md` has an entry;
+- [ ] if a service name, an entity id or the safety story changed,
+      `dashboards/energy_guard.yaml` and `docs/DASHBOARD.md` still match;
+- [ ] a new configuration option is reachable from **both** the options flow and
+      the configuration panel (`config_api.py`, the panel `FIELDS` table, and
+      `docs/CONFIGURATION.md`);
 - [ ] no new runtime dependency, no direct database access, no new secret;
 - [ ] existing entity ids and statistic ids are untouched.
 

@@ -107,6 +107,8 @@ class EnergyGuardHub:
         self.reported_fingerprints: set[str] = set()
         self.last_scan: datetime | None = None
         self.last_scan_error: str | None = None
+        self.last_scan_scope: str | None = None
+        self.last_scan_statistic_count: int = 0
         self._listeners: set[Callable[[], None]] = set()
         self._entities: dict[str, str] = {}
 

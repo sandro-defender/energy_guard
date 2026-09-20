@@ -94,6 +94,24 @@ async def async_statistic_metadata(
     return {item["statistic_id"]: item for item in metadata}
 
 
+async def async_all_statistic_metadata(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Return metadata for every cumulative (``has_sum``) statistic.
+
+    Used by a scan with ``scope: energy`` or ``scope: all``.  Only cumulative
+    statistics can be corrupted by a source that briefly reported ``0``, so
+    mean-only statistics are never returned.
+    """
+    from homeassistant.components.recorder.statistics import async_list_statistic_ids
+
+    if not recorder_is_available(hass):
+        raise RecorderUnavailableError()
+    try:
+        return await async_list_statistic_ids(hass, statistic_type="sum")
+    except TypeError:  # pragma: no cover - older Home Assistant signature
+        metadata = await async_list_statistic_ids(hass)
+        return [item for item in metadata if item.get("has_sum")]
+
+
 async def async_statistics_rows(
     hass: HomeAssistant,
     statistic_ids: list[str],

@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import statistics as py_statistics
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from itertools import pairwise
@@ -21,17 +22,26 @@ from typing import Any, Final
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import SEVERITY_WARNING
+from .const import (
+    DEFAULT_SCAN_SCOPE,
+    MAX_DISCOVERED_STATISTICS,
+    SCAN_SCOPE_ALL,
+    SCAN_SCOPE_ENERGY,
+    SEVERITY_WARNING,
+)
 from .costs import build_cost_suggestions
 from .models import DetectionRules, ScanCandidate
 from .recorder_io import (
+    RecorderUnavailableError,
     as_utc,
+    async_all_statistic_metadata,
     async_statistic_metadata,
     async_statistics_rows,
     iso_timestamp,
     recorder_is_available,
     stored_unit,
 )
+from .units import is_energy_unit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +78,7 @@ class ScanResult:
     statistics: dict[str, dict[str, Any]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     recorder_available: bool = True
+    scope: str = DEFAULT_SCAN_SCOPE
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON serialisable representation."""
@@ -77,6 +88,8 @@ class ScanResult:
             "start_time": self.start.isoformat(),
             "end_time": self.end.isoformat(),
             "statistic_ids": self.statistic_ids,
+            "statistic_count": len(self.statistic_ids),
+            "scope": self.scope,
             "candidate_count": len(self.candidates),
             "candidates": [item.to_dict() for item in self.candidates],
             "cost_suggestions": self.cost_suggestions,
@@ -208,6 +221,63 @@ def detect_offsets(
 # ---------------------------------------------------------------------------
 # Scanner
 # ---------------------------------------------------------------------------
+async def async_discover_statistic_ids(
+    hass: HomeAssistant,
+    *,
+    scope: str,
+    linked_ids: Iterable[str] = (),
+    max_statistics: int = MAX_DISCOVERED_STATISTICS,
+) -> tuple[list[str], list[str]]:
+    """Return the statistic ids a scan with ``scope`` should cover.
+
+    ``linked`` keeps the historic behaviour (only the statistics Energy Guard
+    is linked to), ``energy`` adds every cumulative statistic with an energy
+    unit and ``all`` every cumulative statistic in the recorder.  Statistics
+    Energy Guard is already linked to come first, so a truncated "scan
+    everything" run still covers the sensors the user configured.
+
+    Returns the ids and the warnings that belong into the scan response.
+    """
+    linked = list(dict.fromkeys(str(item) for item in linked_ids if item))
+    if scope not in (SCAN_SCOPE_ENERGY, SCAN_SCOPE_ALL):
+        return linked, []
+
+    try:
+        metadata = await async_all_statistic_metadata(hass)
+    except RecorderUnavailableError:
+        return linked, [
+            "The recorder is not available, so the available statistics could "
+            "not be listed. Only the Energy Guard statistics were scanned."
+        ]
+
+    ids: list[str] = []
+    for item in metadata:
+        statistic_id = item.get("statistic_id")
+        if not statistic_id or statistic_id in linked:
+            continue
+        if scope == SCAN_SCOPE_ENERGY and not (
+            is_energy_unit(stored_unit(item)) or item.get("unit_class") == "energy"
+        ):
+            continue
+        ids.append(str(statistic_id))
+
+    ids.sort()
+    warnings: list[str] = []
+    if len(ids) > max_statistics:
+        warnings.append(
+            f"{len(ids)} statistics are available; only the first {max_statistics} "
+            "were scanned. Narrow the lookback or pass statistic_ids to scan the "
+            "rest."
+        )
+        ids = ids[:max_statistics]
+    if not ids and not linked:
+        warnings.append(
+            "No statistics were found for this scope. Check that the sensors have "
+            "long term statistics (they need a state class and the recorder)."
+        )
+    return linked + ids, warnings
+
+
 async def async_scan(
     hass: HomeAssistant,
     *,

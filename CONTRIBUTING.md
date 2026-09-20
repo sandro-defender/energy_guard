@@ -56,7 +56,7 @@ the same PR.
 ## 3. Setting up
 
 ```bash
-git clone https://github.com/your-github-username/energy-guard.git
+git clone https://github.com/sandro-defender/energy_guard.git
 cd energy-guard
 uv venv --python 3.14 .venv
 uv pip install --python .venv/bin/python -r requirements_test.txt

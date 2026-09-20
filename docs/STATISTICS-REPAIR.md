@@ -110,6 +110,25 @@ data:
 response_variable: scan
 ```
 
+If you do not know yet which sensors are affected (the usual case after a
+gateway outage, and always the case when Energy Guard is installed into an
+installation that was already wrong), leave `statistic_ids` out and widen the
+scope instead:
+
+```yaml
+action: energy_guard.scan_statistics
+data:
+  scope: all        # linked (default) | energy | all
+  include_cost_suggestions: true
+response_variable: scan
+```
+
+`scope: energy` reads every energy statistic of the recorder, `scope: all` every
+cumulative statistic (water, gas, ...).  The candidates tell you exactly which
+statistic each offset belongs to, so the repair step below stays per statistic -
+Energy Guard never repairs a statistic you did not name.  The scan is capped at
+500 statistics per run and reports what it read in `statistic_count`/`scope`.
+
 Read `candidates[].evidence`, `offset` and `estimated_false_energy`.  A candidate
 that only carries `last_reset_changed` is usually a real meter reset - do not
 blindly repair it.
@@ -299,7 +318,7 @@ resort, never the first, and it is never automatic.
 
 | Symptom | Likely cause / what to do |
 | --- | --- |
-| Scan returns `candidates: []` though the dashboard looks wrong | The window is too short (`start_time`) or the affected statistic is not in `statistic_ids`. Widen the window; check `statistics[].rows` to see whether the statistic was read at all. |
+| Scan returns `candidates: []` though the dashboard looks wrong | The window is too short (`start_time`) or the affected statistic is not in `statistic_ids`. Widen the window, run the scan with `scope: all`, and check `statistic_count`/`statistics[].rows` to see whether the statistic was read at all. |
 | `status: recorder_unavailable` | The recorder is restarting or disabled (`recorder: purge_keep_days` misconfigured). Retry after Home Assistant is fully up. |
 | `reason: already_repaired` | The row already has the expected sum (tolerance 0.001). Nothing to do. |
 | `reason: fingerprint_mismatch` | The statistic changed after your scan - re-scan before repairing. |

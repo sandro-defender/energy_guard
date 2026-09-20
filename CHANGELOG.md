@@ -23,12 +23,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   data-changing services, options-flow sections, translated issues, README and
   docs presence, no direct database access anywhere and no credential-like
   strings in the component.
+- **Configuration page in the sidebar** (`panel.py`, `websocket.py`,
+  `config_api.py`, `frontend/energy_guard-panel.js`): an admin-only page with all
+  nine sections (protected, derived, meters, detection, statistics, cost,
+  backups, repair workflow, templates), so the Home Assistant settings pages are
+  optional.  It talks to a new admin-only WebSocket API
+  (`energy_guard/config/*`) and stores through the same validation layer the
+  options flow uses, so both UIs cannot drift apart.  Repairs are preview-first,
+  money needs its own confirmation dialog, deleting a definition is confirmed,
+  and the page is strictly optional: without a frontend it is simply not
+  registered and a registration failure is only logged.
+- **Scan scopes**: `energy_guard.scan_statistics` can now look beyond the
+  sensors Energy Guard manages.  `scope: linked` (default) keeps the old
+  behaviour, `scope: energy` adds every cumulative energy statistic of the
+  recorder and `scope: all` every cumulative statistic, whatever its unit, so
+  corruption that happened before Energy Guard was installed is found as well.
+  Explicit `statistic_ids`/`entity_ids` always win over the scope.  Wide scans
+  are capped at 500 statistics, report `scope`/`statistic_count`, expose
+  `last_scan_scope`, `last_scan_statistic_count` and `scan_scope` on
+  `sensor.energy_guard_statistics_issues`, are selectable in the options
+  (Statistics Repair -> Default scan scope) and as three buttons on the
+  dashboard.  Scanning stays strictly read-only; repairs are never implicit.
 - **Documentation set**: `docs/ARCHITECTURE.md`, `docs/SAFETY.md`,
   `docs/SERVICES.md`, `docs/STATISTICS-REPAIR.md`, `docs/DEVELOPMENT.md`,
-  `CONTRIBUTING.md`, and a documentation index in the README.
+  `docs/CONFIGURATION.md`, `docs/DASHBOARD.md`, `CONTRIBUTING.md`, and a
+  documentation index in the README.
+- **Optional dashboard** (`dashboards/energy_guard.yaml`): a read-only Lovelace
+  dashboard with a status view (diagnostic entities, open issue, detection
+  settings in use), a source-vs-protected view and a repair centre that explains
+  the safety model, starts the read-only scan and prints the scan candidates,
+  the cost suggestions and the exact manual service calls. Core cards only, no
+  repair/calibrate/clear button, no frontend resources. Documented in
+  `docs/DASHBOARD.md`; `tests/test_dashboard.py` keeps it valid YAML, free of
+  dead entity references and free of data-changing card actions, and renders
+  every template of it against a real Home Assistant instance.
 
 ### Changed
 
+- **The repository moved to its real URL**: `manifest.json` (`documentation`,
+  `issue_tracker`, `@sandro-defender`), `repairs.py`, README, `CONTRIBUTING.md`,
+  `docs/DEVELOPMENT.md` and the CHANGELOG links no longer contain the
+  placeholder owner of the upstream template.  A contract test enforces this.
 - The config and options flows refuse a protected or derived sensor name whose
   entity id is already taken (the source sensor itself, another protected
   sensor or another derived sensor). Home
@@ -126,5 +161,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Never reads or edits user YAML or template files; only integration-owned
   entities and configuration are managed.
 
-[1.1.0]: https://github.com/your-github-username/energy-guard/releases/tag/v1.1.0
-[1.0.0]: https://github.com/your-github-username/energy-guard/releases/tag/v1.0.0
+[1.1.0]: https://github.com/sandro-defender/energy_guard/releases/tag/v1.1.0
+[1.0.0]: https://github.com/sandro-defender/energy_guard/releases/tag/v1.0.0

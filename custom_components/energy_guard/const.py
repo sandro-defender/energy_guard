@@ -31,6 +31,44 @@ CONF_COST: Final = "cost_repair"
 CONF_BACKUPS: Final = "backups_reports"
 
 # ---------------------------------------------------------------------------
+# Configuration sections (shared by the options flow and the config panel)
+# ---------------------------------------------------------------------------
+SECTION_PROTECTED: Final = "protected_sensors"
+SECTION_DERIVED: Final = "derived_sensors"
+SECTION_METERS: Final = "utility_meters"
+SECTION_DETECTION: Final = "detection_rules"
+SECTION_STATISTICS: Final = "statistics_repair"
+SECTION_COST: Final = "cost_repair"
+SECTION_BACKUPS: Final = "backups_reports"
+SECTION_REVIEW: Final = "review"
+SECTION_EXPORT: Final = "export_yaml"
+#: Every section, in menu order.
+SECTIONS: Final = (
+    SECTION_PROTECTED,
+    SECTION_DERIVED,
+    SECTION_METERS,
+    SECTION_DETECTION,
+    SECTION_STATISTICS,
+    SECTION_COST,
+    SECTION_BACKUPS,
+    SECTION_REVIEW,
+    SECTION_EXPORT,
+)
+#: Sections that store a list of definitions (protected/derived/meters).
+CONF_DEFINITION_SECTIONS: Final = (
+    SECTION_PROTECTED,
+    SECTION_DERIVED,
+    SECTION_METERS,
+)
+#: Sections that store a settings dictionary.
+CONF_SETTINGS_SECTIONS: Final = (
+    SECTION_DETECTION,
+    SECTION_STATISTICS,
+    SECTION_COST,
+    SECTION_BACKUPS,
+)
+
+# ---------------------------------------------------------------------------
 # Sensor definition keys
 # ---------------------------------------------------------------------------
 CONF_ID: Final = "id"
@@ -91,6 +129,7 @@ CONF_STAT_JUMP_KWH: Final = "statistics_jump_threshold"
 CONF_STAT_JUMP_RATIO: Final = "statistics_jump_ratio"
 CONF_STAT_SUM_STATE_RATIO: Final = "sum_state_ratio"
 CONF_EVENT_RETENTION_DAYS: Final = "event_retention_days"
+CONF_SCAN_SCOPE: Final = "scan_scope"
 
 DEFAULT_SCAN_INTERVAL: Final = 300
 DEFAULT_LOOKBACK_HOURS: Final = 24
@@ -101,6 +140,24 @@ DEFAULT_STAT_JUMP_KWH: Final = 100.0
 DEFAULT_STAT_JUMP_RATIO: Final = 20.0
 DEFAULT_STAT_SUM_STATE_RATIO: Final = 10.0
 DEFAULT_EVENT_RETENTION_DAYS: Final = 14
+
+# ---------------------------------------------------------------------------
+# Statistics scan scope: which statistics a scan covers
+# ---------------------------------------------------------------------------
+#: Only the statistics Energy Guard is linked to (protected sources, derived
+#: sensors, utility meter sources and the configured cost statistics).
+SCAN_SCOPE_LINKED: Final = "linked"
+#: Every cumulative statistic that carries an energy unit (kWh, Wh, MWh, ...).
+SCAN_SCOPE_ENERGY: Final = "energy"
+#: Every cumulative statistic in the recorder, whatever its unit.
+SCAN_SCOPE_ALL: Final = "all"
+#: Not a user selectable scope: reported back when explicit ids were scanned.
+SCAN_SCOPE_EXPLICIT: Final = "explicit"
+#: Scopes a user may select.
+SCAN_SCOPES: Final = (SCAN_SCOPE_LINKED, SCAN_SCOPE_ENERGY, SCAN_SCOPE_ALL)
+DEFAULT_SCAN_SCOPE: Final = SCAN_SCOPE_LINKED
+#: Hard cap so a whole recorder scan stays a predictable amount of work.
+MAX_DISCOVERED_STATISTICS: Final = 500
 
 # ---------------------------------------------------------------------------
 # Protection defaults

@@ -268,11 +268,13 @@
         "data": {
           "statistics_jump_threshold": "Absolute jump threshold",
           "statistics_jump_ratio": "Jump threshold vs. typical increase",
-          "sum_state_ratio": "Sum vs. state mismatch ratio"
+          "sum_state_ratio": "Sum vs. state mismatch ratio",
+          "scan_scope": "Default scan scope"
         },
         "data_description": {
           "statistics_jump_threshold": "An hourly statistics increase above this value is reported (in kWh).",
-          "statistics_jump_ratio": "A jump is also reported when it is this many times larger than the typical hourly increase."
+          "statistics_jump_ratio": "A jump is also reported when it is this many times larger than the typical hourly increase.",
+          "scan_scope": "Which statistics the scanner covers by default. 'Only my Energy Guard sensors' keeps scans fast (protected sources, derived sensors, utility meter sources and the cost statistics). 'All energy statistics' also checks every other energy sensor in the recorder, including ones not managed by Energy Guard. 'All statistics' checks every cumulative statistic whatever its unit. Scanning is always read-only; nothing is repaired automatically."
         }
       },
       "cost_repair": {
@@ -356,6 +358,10 @@
         "config_entry_id": {
           "name": "Config entry",
           "description": "Only act on this Energy Guard config entry."
+        },
+        "scope": {
+          "name": "Scan scope",
+          "description": "Which statistics to scan: linked (only the sensors Energy Guard manages), energy (every energy statistic in the recorder) or all (every cumulative statistic). Ignored when statistic_ids or entity_ids are given."
         }
       }
     },
@@ -502,6 +508,15 @@
     "blocked_readings": {
       "title": "{count} bad energy reading(s) blocked in the last {window_hours} h",
       "description": "**{integration} {version}** suppressed {count} reading(s) of {entities} that would have corrupted the Energy Dashboard (an estimated {estimated_false_energy} kWh of false energy).\n\nThe protected sensors stayed `unavailable` instead of publishing a false 0, so no new corruption was written. Check your meter or gateway if the source sensors keep reconnecting, and use `energy_guard.scan_statistics` to find older damage."
+    }
+  },
+  "selector": {
+    "scan_scope": {
+      "options": {
+        "linked": "Only my Energy Guard sensors",
+        "energy": "All energy statistics",
+        "all": "All statistics (every cumulative sensor)"
+      }
     }
   }
 }

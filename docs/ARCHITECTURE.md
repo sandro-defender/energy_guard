@@ -281,6 +281,9 @@ generated file is never read back by the integration.
 | `test_calibrate.py` | utility meter calibration (exact value and computed target) |
 | `test_migrations.py` | backwards compatibility of stored configuration |
 | `test_flows_and_diagnostics.py` | config/options flow, diagnostics, Repairs issues, unload |
+| `test_dashboard.py` | the shipped dashboard: valid YAML, read-only card actions, real entity ids, rendering templates |
+| `test_websocket_api.py` | the configuration API: admin-only commands, validation, storage, subscriptions |
+| `test_panel.py` | panel registration (optional, admin-only, removed on unload) and the served JavaScript asset |
 | `test_contracts.py` | packaging, service/docs/translation contracts, no DB access, no secrets |
 
 Run everything with `pytest tests/ -q` (see [`DEVELOPMENT.md`](DEVELOPMENT.md)).

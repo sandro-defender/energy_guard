@@ -188,6 +188,8 @@ def test_documentation_files_exist_and_cross_reference() -> None:
         "docs/SERVICES.md",
         "docs/STATISTICS-REPAIR.md",
         "docs/DEVELOPMENT.md",
+        "docs/CONFIGURATION.md",
+        "docs/DASHBOARD.md",
     ]
     for relative in docs:
         path = REPO_ROOT / relative
@@ -256,9 +258,25 @@ def test_module_docstrings_explain_responsibility() -> None:
         assert len(doc.splitlines()) >= 2, f"{path.name} needs a real docstring"
 
 
-def test_docs_do_not_reference_placeholders_that_break_hacs() -> None:
-    """The README/manifest owner is a single, documented placeholder."""
+def test_repository_urls_point_at_the_real_project() -> None:
+    """Manifest, README and the placeholder guard agree on the repository."""
     manifest = json.loads((COMPONENT_DIR / "manifest.json").read_text())
     assert all(owner.startswith("@") for owner in manifest["codeowners"])
+    repository = "https://github.com/sandro-defender/energy_guard"
+    for key in ("documentation", "issue_tracker"):
+        assert manifest[key].startswith(repository), key
+
     readme = (REPO_ROOT / "README.md").read_text()
-    assert manifest["codeowners"][0] in readme or "your-github-username" in readme
+    assert manifest["codeowners"][0] in readme
+    assert repository in readme
+    # No leftovers of the template a fork starts from.
+    for relative in (
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "docs/DEVELOPMENT.md",
+        "custom_components/energy_guard/manifest.json",
+        "custom_components/energy_guard/repairs.py",
+    ):
+        text = (REPO_ROOT / relative).read_text()
+        assert "your-github-username" not in text, relative

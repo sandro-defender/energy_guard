@@ -60,6 +60,7 @@ from .const import (
     CONF_REQUIRE_ALL_SOURCES,
     CONF_SCALE,
     CONF_SCAN_INTERVAL,
+    CONF_SCAN_SCOPE,
     CONF_SIMULTANEOUS_THRESHOLD,
     CONF_SIMULTANEOUS_WINDOW_MINUTES,
     CONF_SOURCE,
@@ -86,6 +87,7 @@ from .const import (
     DEFAULT_RECOVERY_HOLD_SCANS,
     DEFAULT_REJECT_LARGE_JUMPS,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SCAN_SCOPE,
     DEFAULT_SIMULTANEOUS_THRESHOLD,
     DEFAULT_SIMULTANEOUS_WINDOW_MINUTES,
     DEFAULT_STAT_JUMP_KWH,
@@ -98,6 +100,7 @@ from .const import (
     MODE_DIFFERENCE,
     MODE_PHASE_SPLIT,
     MODE_SUM,
+    SCAN_SCOPES,
 )
 
 
@@ -411,11 +414,26 @@ def detection_schema(data: dict[str, Any] | None = None) -> vol.Schema:
     )
 
 
+def _scan_scope_selector() -> SelectSelector:
+    """Return the selector for the statistics scan scope."""
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=list(SCAN_SCOPES),
+            mode=SelectSelectorMode.DROPDOWN,
+            translation_key="scan_scope",
+        )
+    )
+
+
 def statistics_schema(data: dict[str, Any] | None = None) -> vol.Schema:
     """Return the schema for the statistics scanner thresholds."""
     data = data or {}
     return vol.Schema(
         {
+            vol.Optional(
+                CONF_SCAN_SCOPE,
+                default=data.get(CONF_SCAN_SCOPE, DEFAULT_SCAN_SCOPE),
+            ): _scan_scope_selector(),
             vol.Optional(
                 CONF_STAT_JUMP_KWH,
                 default=data.get(CONF_STAT_JUMP_KWH, DEFAULT_STAT_JUMP_KWH),

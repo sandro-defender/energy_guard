@@ -30,11 +30,14 @@ from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    DEFAULT_SCAN_SCOPE,
     DOMAIN,
     EVENT_CALIBRATED,
     EVENT_CLEARED,
     EVENT_REPAIRED,
     RECOMMENDED_ACTIONS,
+    SCAN_SCOPE_EXPLICIT,
+    SCAN_SCOPES,
     SERVICE_CALIBRATE_UTILITY_METER,
     SERVICE_CLEAR_STATISTICS,
     SERVICE_EXPORT_TEMPLATES,
@@ -47,7 +50,7 @@ from .const import (
     TEMPLATES_FILE,
 )
 from .costs import effective_price, tariff_line
-from .detection import async_scan
+from .detection import async_discover_statistic_ids, async_scan
 from .export import (
     async_export_report,
     async_write_templates,
@@ -83,6 +86,7 @@ SCAN_SCHEMA = vol.Schema(
         vol.Optional("end_time"): cv.datetime,
         vol.Optional("statistic_ids"): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional("entity_ids"): vol.All(cv.ensure_list, [cv.entity_id]),
+        vol.Optional("scope"): vol.In(SCAN_SCOPES),
         vol.Optional("config_entry_id"): cv.string,
         vol.Optional("include_cost_suggestions", default=True): cv.boolean,
     }
@@ -209,15 +213,26 @@ async def async_handle_scan(call: ServiceCall) -> ServiceResponse:
         start = as_utc(call.data.get("start_time")) or (
             end - timedelta(hours=detection.lookback_hours)
         )
-        statistic_ids: list[str] = list(call.data.get("statistic_ids") or [])
-        statistic_ids.extend(call.data.get("entity_ids") or [])
-        if not statistic_ids:
-            statistic_ids = hub.statistic_ids()
-        statistic_ids = list(dict.fromkeys(statistic_ids))
+        explicit: list[str] = list(call.data.get("statistic_ids") or [])
+        explicit.extend(call.data.get("entity_ids") or [])
+        if explicit:
+            statistic_ids = list(dict.fromkeys(explicit))
+            effective_scope = SCAN_SCOPE_EXPLICIT
+            discovery_warnings: list[str] = []
+        else:
+            effective_scope = str(
+                call.data.get("scope") or detection.scan_scope or DEFAULT_SCAN_SCOPE
+            )
+            statistic_ids, discovery_warnings = await async_discover_statistic_ids(
+                hass,
+                scope=effective_scope,
+                linked_ids=hub.statistic_ids(),
+            )
         if not statistic_ids:
             raise ServiceValidationError(
-                "No statistic ids to scan. Either configure protected sensors first "
-                "or pass statistic_ids/entity_ids to energy_guard.scan_statistics."
+                "No statistic ids to scan. Either configure protected sensors first, "
+                "choose scope: energy/all, or pass statistic_ids/entity_ids to "
+                "energy_guard.scan_statistics."
             )
 
         cost = hub.config.cost
@@ -242,8 +257,12 @@ async def async_handle_scan(call: ServiceCall) -> ServiceResponse:
         except RecorderUnavailableError as err:
             raise ServiceValidationError(str(err)) from err
 
+        result.scope = effective_scope
+        result.warnings = discovery_warnings + result.warnings
         hub.scan_candidates = [item.to_dict() for item in result.candidates]
         hub.last_scan = dt_util.utcnow()
+        hub.last_scan_scope = effective_scope
+        hub.last_scan_statistic_count = len(result.statistic_ids)
         hub.last_scan_error = None
         hub.async_update_listeners()
         await async_sync_repair_issues(hass, hub)

@@ -24,6 +24,8 @@ from .const import (
     DEFAULT_UNIT,
     DEFAULT_ZERO_MIN_PREVIOUS,
     MODE_SUM,
+    SCAN_SCOPE_LINKED,
+    SCAN_SCOPES,
 )
 
 
@@ -310,6 +312,7 @@ class DetectionRules:
     statistics_jump_ratio: float = 20.0
     sum_state_ratio: float = 10.0
     event_retention_days: int = 14
+    scan_scope: str = SCAN_SCOPE_LINKED
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON serialisable representation."""
@@ -336,7 +339,10 @@ class DetectionRules:
                 "statistics_jump_ratio": 20.0,
                 "sum_state_ratio": 10.0,
             },
+            strings={"scan_scope": SCAN_SCOPE_LINKED},
         )
+        if values.get("scan_scope") not in SCAN_SCOPES:
+            values["scan_scope"] = SCAN_SCOPE_LINKED
         return cls(**values)
 
 

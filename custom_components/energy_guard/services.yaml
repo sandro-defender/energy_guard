@@ -37,6 +37,23 @@ scan_statistics:
       name: Entity IDs
       description: Same as statistic_ids, but using the entity picker.
       required: false
+    scope:
+      name: Scan scope
+      description: >-
+        Which statistics to scan. "linked" (default) scans only the statistics
+        Energy Guard is linked to. "energy" also scans every energy statistic in
+        the recorder (kWh, Wh, MWh, ...), including sensors managed by other
+        integrations. "all" scans every cumulative statistic, whatever its unit.
+        The scope is ignored when statistic_ids or entity_ids are given. Scanning
+        is always read-only.
+      required: false
+      example: energy
+      selector:
+        select:
+          options:
+            - linked
+            - energy
+            - all
       selector:
         entity:
           domain: sensor

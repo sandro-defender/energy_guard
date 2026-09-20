@@ -51,6 +51,7 @@ It produces the candidates you later repair explicitly.
 | --- | --- | --- | --- |
 | `statistic_ids` | no | every Energy Guard statistic | statistic ids to scan, e.g. `sensor.grid_import` |
 | `entity_ids` | no | - | alias for `statistic_ids`; entity ids are converted to statistic ids |
+| `scope` | no | `linked` (from the options) | `linked` / `energy` / `all` - which statistics to scan. Ignored when `statistic_ids`/`entity_ids` are given |
 | `start_time` | no | `now - lookback_hours` | start of the window |
 | `end_time` | no | now | end of the window |
 | `include_cost_suggestions` | no | `true` | also propose monetary offsets when cost repair is configured |
@@ -68,6 +69,39 @@ data:
 response_variable: scan_result
 ```
 
+Scan everything the recorder stores, without naming a single sensor:
+
+```yaml
+action: energy_guard.scan_statistics
+data:
+  scope: all
+  # optional, defaults to the configured lookback (24 h)
+  # start_time: "2026-09-01T00:00:00+00:00"
+response_variable: scan_result
+```
+
+**Scopes.** The scope decides which statistics a scan reads:
+
+| Scope | What is scanned | When to use it |
+| --- | --- | --- |
+| `linked` (default) | the statistics Energy Guard is linked to: protected sources, derived sensors, utility meter sources, the configured cost statistics | everyday use; it is fast and quiet |
+| `energy` | additionally every cumulative statistic in the recorder with an energy unit (kWh, Wh, MWh, MWh, ...) or `unit_class: energy` - including sensors Energy Guard does not manage | first install on an installation whose Energy Dashboard was already corrupted, or after a suspected outage of a sensor you have not registered yet |
+| `all` | additionally every cumulative statistic in the recorder, whatever its unit (water, gas, volume, ...) | a full audit of everything the recorder stores |
+
+The scope of a scan is reported back as `scope` (`linked`, `energy`, `all`, or
+`explicit` when you passed `statistic_ids`/`entity_ids`) and stored on
+`hub.last_scan_scope`, which the diagnostic sensor exposes as
+`last_scan_scope`/`last_scan_statistic_count`.
+
+Wide scopes are capped at 500 statistics per scan (`MAX_DISCOVERED_STATISTICS`);
+the response then carries a warning and the linked statistics are always scanned
+first. A scan never writes anything, whatever the scope.
+
+Repairs for statistics that are **not** managed by Energy Guard work exactly the
+same - pass the `statistic_id` from the candidates to
+`energy_guard.repair_statistics` - but they are never done automatically and
+never applied to a statistic you did not name.
+
 **Dry run / confirmation.** Not applicable - this service is always read-only and
 `read_only: true` is part of its response.
 
@@ -80,6 +114,8 @@ response_variable: scan_result
   "start_time": "2026-09-18T21:00:00+00:00",
   "end_time": "2026-09-20T02:00:00+00:00",
   "statistic_ids": ["sensor.grid_import"],
+  "statistic_count": 1,
+  "scope": "linked",
   "candidate_count": 1,
   "candidates": [
     {

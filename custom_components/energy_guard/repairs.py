@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 ISSUE_STATISTICS_OFFSET = "statistics_offset"
 ISSUE_BLOCKED_READINGS = "blocked_readings"
 
-LEARN_MORE_URL = "https://github.com/your-github-username/energy-guard#readme"
+LEARN_MORE_URL = "https://github.com/sandro-defender/energy_guard#readme"
 
 
 async def async_sync_repair_issues(hass: HomeAssistant, hub: EnergyGuardHub) -> None:

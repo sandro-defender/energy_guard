@@ -34,10 +34,18 @@ directory and the repair history untouched.
 | Repair a **cost** statistic | `energy_guard.repair_statistics` (`cost_repairs`) | `confirm: true` **and** `confirm_cost: true` | yes | re-read + compare | as above |
 | Clear statistics | `energy_guard.clear_statistics` | `confirm: true` + explicit `statistic_ids` | yes, all rows of each statistic | statistic must be gone | backup file contains all old rows |
 | Calibrate a utility meter | `energy_guard.calibrate_utility_meter` | `confirm: true`, target entity must be `utility_meter` | no (the meter has no long term statistics) | meter read back | `current_value` in the response lets you calibrate back |
-| Delete/disable a protected sensor | options flow (`Protected Sensors -> delete/toggle`) | yes, a confirmation step per item | n/a | entity registry cleaned by Home Assistant | re-add the definition; the historic statistics of the protected entity stay |
+| Delete/disable a protected sensor | options flow (`Protected Sensors -> delete/toggle`) **or the configuration panel** | yes, a confirmation step per item (a dialog in the panel, `confirm: true` on the command) | n/a | entity registry cleaned by Home Assistant | re-add the definition; the historic statistics of the protected entity stay |
 | Write the YAML export | options flow (`Export YAML templates`) or `export_templates` with `write_file: true` | explicit choice of the write step | n/a | path returned | delete the generated file |
 
 Everything else in Energy Guard is read-only.
+
+**The optional configuration panel is the same safety model, not a shortcut.**
+It is an administrator-only sidebar page; every write goes through the same
+validation and storage layer as the options flow; it sends `confirm: true` only
+after an explicit confirmation dialog (and `confirm_cost: true` only after a
+second, separate one); the *Apply* button of a repair candidate stays disabled
+until that candidate was previewed with a dry run.  If the panel cannot be
+registered, nothing else changes - see [CONFIGURATION.md](CONFIGURATION.md).
 
 Calling a modifying service **without** confirmation never raises away the
 information: it returns a preview (what would change, from which value to which

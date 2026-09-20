@@ -23,7 +23,11 @@ Energy Guard gives you:
   it** (a JSON backup of every changed statistic is written first).
 * **Monetary repair** for the cost statistics of the Energy Dashboard,
   including currencies such as GEL.
-* **Dashboards** for the last anomaly and the current data issue.
+* **Diagnostics and an optional dashboard** - six diagnostic entities plus a
+  ready-made, read-only Lovelace dashboard (`dashboards/energy_guard.yaml`).
+* **A configuration page in the sidebar** - every option, every sensor and the
+  complete repair workflow in one admin-only page, so the Home Assistant
+  settings pages are optional (`/energy-guard-config`).
 
 Nothing is ever changed automatically. `scan_statistics`, `export_repair_report`
 and `export_templates` are strictly read-only, `repair_statistics`,
@@ -45,6 +49,8 @@ YAML, your templates or any entity that it did not create itself.
 - [Utility meter calibration](#utility-meter-calibration)
 - [Options flow](#options-flow)
 - [Diagnostics and dashboards](#diagnostics-and-dashboards)
+- [Configuration page (optional)](#configuration-page-optional)
+- [Dashboard (optional)](#dashboard-optional)
 - [Safety model](#safety-model)
 - [Troubleshooting](#troubleshooting)
 - [Documentation](#documentation)
@@ -55,8 +61,7 @@ YAML, your templates or any entity that it did not create itself.
 ## Installation (HACS)
 
 1. HACS -> three-dot menu -> **Custom repositories**.
-2. Add `https://github.com/your-github-username/energy-guard` as an
-   **Integration**.
+2. Add `https://github.com/sandro-defender/energy_guard` as an **Integration** (repository of @sandro-defender).
 3. Install **Energy Guard** and restart Home Assistant.
 4. **Settings -> Devices & Services -> Add integration -> Energy Guard**.
 5. Pick the cumulative energy sensors you want to protect. Energy Guard creates
@@ -182,6 +187,27 @@ data:
     - sensor.grid_import
   include_cost_suggestions: true
 ```
+
+Scan without naming a sensor - useful when you install Energy Guard into an
+installation whose Energy Dashboard was wrong long before:
+
+```yaml
+action: energy_guard.scan_statistics
+data:
+  scope: all        # linked (default) | energy | all
+```
+
+| `scope` | Scans |
+| --- | --- |
+| `linked` (default) | only the statistics Energy Guard manages |
+| `energy` | every energy statistic in the recorder (kWh, Wh, MWh, ...) |
+| `all` | every cumulative statistic, whatever its unit (water, gas, ...) |
+
+A wide scan is capped at 500 statistics, reports what it read
+(`statistic_count`, `last_scan_scope` on `sensor.energy_guard_statistics_issues`)
+and is exactly as read-only as a normal one: nothing is repaired, ever. Set the
+default scope once in **Options -> Statistics Repair -> Default scan scope**, or
+press one of the three scan buttons on the dashboard's *Repair centre* view.
 
 ```json
 {
@@ -417,7 +443,7 @@ to the calibration history.
 | Derived Sensors | add / edit / enable / disable / delete derived sensors |
 | Utility Meters | register meters for calibration |
 | Detection Rules | thresholds, grace periods, issue window, scan interval |
-| Statistics Repair | lookback window, jump thresholds, cost repair settings |
+| Statistics Repair | lookback window, jump thresholds, default scan scope (`linked`/`energy`/`all`), cost repair settings |
 | Cost Repair | tariff, currency, energy and cost statistic ids |
 | Backups and Reports | number of backups, report retention |
 | Review current issues | the current candidates and the exact service calls |
@@ -445,11 +471,53 @@ text tells you which service call to run) and in the diagnostics download
 (`Settings -> Devices & Services -> Energy Guard -> Download diagnostics`),
 which contains no tokens, secrets or database paths.
 
+## Configuration page (optional)
+
+Energy Guard adds a sidebar entry **Energy Guard** (`/energy-guard-config`,
+administrators only) with every setting of the integration:
+
+| Tab | Content |
+| --- | --- |
+| Overview | status, three read-only scan buttons, counters |
+| Protected / Derived / Meters | add, edit, enable/disable, delete - every field of a definition |
+| Detection | scan interval, lookback, issue window, simultaneous-failure rules, log retention |
+| Statistics | default scan scope (`linked` / `energy` / `all`) and the scanner thresholds |
+| Cost | tariff, currency, statistic ids, optional live price entity |
+| Backups | retention, existing backup/report files, "export a report now" |
+| Repair | the candidates of the last scan and the preview → confirm → apply workflow (money separately confirmed) |
+| Templates | the read-only YAML copy of your configuration |
+
+It is admin-only, uses the same validation and storage layer as the options flow,
+sends `confirm: true` only after an explicit confirmation click, and is optional:
+the options flow (*Settings → Devices & Services → Energy Guard → Configure*) and
+every service keep working without it.  See
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
+## Dashboard (optional)
+
+A read-only Lovelace dashboard ships with the integration:
+[`dashboards/energy_guard.yaml`](dashboards/energy_guard.yaml).
+
+| View | Shows |
+| --- | --- |
+| Status | Outcome headline, the six diagnostic entities, the currently active issue, the detection settings in use |
+| Sources vs protected | Raw source vs protected sensor, derived sensors, the utility meter, 48 h history and 12 month statistics (README example entities - replace them with your own) |
+| Repair centre | Safety model, three read-only scan buttons (my sensors / all energy statistics / all statistics), the scan candidates and cost suggestions, and the exact manual service calls |
+
+It uses core cards only, calls nothing but the read-only
+`energy_guard.scan_statistics` and has no repair/calibrate/clear button - every
+data-changing step stays a manual, confirmation-gated service call. HACS cannot
+install a dashboard, so the file is a one-time copy and paste (or a YAML-mode
+dashboard): see [docs/DASHBOARD.md](docs/DASHBOARD.md). The integration works
+exactly the same without it.
+
 ## Documentation
 
 | Document | Content |
 | --- | --- |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module map, import layering, how a source becomes a protected sensor, detection and repair flow, migration model, test map |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | The sidebar configuration page: what each tab does, the WebSocket commands behind it, its safety rules, troubleshooting |
+| [docs/DASHBOARD.md](docs/DASHBOARD.md) | The optional dashboard: what it shows, the two install methods, how to adapt the example entities, why it has no repair buttons, troubleshooting |
 | [docs/SAFETY.md](docs/SAFETY.md) | What is read-only and what changes data, confirmation semantics, backup files, verification and rollback, the never-do list, privacy rules |
 | [docs/SERVICES.md](docs/SERVICES.md) | Every service with all parameters, real response shapes, dry-run/confirmation behaviour and possible errors |
 | [docs/STATISTICS-REPAIR.md](docs/STATISTICS-REPAIR.md) | The corruption patterns, detection evidence, the step-by-step repair playbook, repair-vs-clear, troubleshooting |
@@ -497,7 +565,7 @@ value returned by the repair) or restore the affected rows from the JSON backup.
 ```bash
 uv venv --python 3.14 .venv
 uv pip install --python .venv/bin/python -r requirements_test.txt
-.venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL   # 126 tests
+.venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL   # 169 tests
 .venv/bin/ruff check custom_components tests
 .venv/bin/ruff format --check custom_components tests
 ```
@@ -513,7 +581,11 @@ handling, config-entry migration and backwards compatibility, the config/options
 flows, diagnostics and the refusal to modify anything without confirmation.
 Repository contracts (manifest, `hacs.json`, service definitions, translations,
 documentation, no direct database access, no secrets) are enforced by
-`tests/test_contracts.py`.
+`tests/test_contracts.py`, `tests/test_dashboard.py` keeps the shipped dashboard
+valid YAML, read-only, free of dead entity references and renders all of its
+templates, and `tests/test_panel.py` plus `tests/test_websocket_api.py` keep the
+configuration page admin-only, confirmation-gated and free of credential or
+path handling.
 
 Contributors: read [CONTRIBUTING.md](CONTRIBUTING.md) (the five rules a change
 may not weaken) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (setup, test map,

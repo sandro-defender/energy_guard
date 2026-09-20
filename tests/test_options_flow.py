@@ -33,6 +33,7 @@ from custom_components.energy_guard.const import (
     CONF_PRICE,
     CONF_PROTECTED,
     CONF_SCALE,
+    CONF_SCAN_SCOPE,
     CONF_SOURCE,
     CONF_SOURCES,
     CONF_STAT_JUMP_KWH,
@@ -43,6 +44,7 @@ from custom_components.energy_guard.const import (
     CONF_UTILITY_METERS,
     MODE_PHASE_SPLIT,
     MODE_SUM,
+    SCAN_SCOPE_ALL,
 )
 from custom_components.energy_guard.hub import get_hub
 
@@ -417,11 +419,16 @@ async def test_detection_statistics_cost_and_backup_sections(
     assert result["step_id"] == "statistics_repair"
     assert "last_scan" in result["description_placeholders"]
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_STAT_JUMP_KWH: 500.0}
+        result["flow_id"], {CONF_STAT_JUMP_KWH: 500.0, CONF_SCAN_SCOPE: SCAN_SCOPE_ALL}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
     assert entry.options[CONF_DETECTION][CONF_STAT_JUMP_KWH] == 500.0
+    assert entry.options[CONF_DETECTION][CONF_SCAN_SCOPE] == SCAN_SCOPE_ALL
+    # The stored scope is what the scanner uses as its default.
+    hub = get_hub(hass, entry.entry_id)
+    assert hub is not None
+    assert hub.config.detection.scan_scope == SCAN_SCOPE_ALL
 
     # Cost repair: the GEL tariff used by the documented worked example.
     result = await _open_section(hass, entry, CONF_COST)
