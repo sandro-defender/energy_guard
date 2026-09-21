@@ -1,0 +1,15 @@
+# Pre-commit hooks: the same checks CI runs, before you commit.
+#
+#   pip install pre-commit   (or: uv tool install pre-commit)
+#   pre-commit install
+#
+# The ruff revision is pinned to the version the CI job installs, so local
+# results always match CI results.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.8
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format

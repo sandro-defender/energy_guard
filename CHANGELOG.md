@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Project infrastructure**: GitHub Actions CI (`.github/workflows/tests.yml`)
+  running ruff and the full test suite on Python 3.13 and 3.14 plus `hassfest`
+  and HACS validation on every push and pull request; issue templates,
+  `SECURITY.md`, a `pre-commit` configuration mirroring the CI lint, a
+  `.gitignore` and `.editorconfig`. `pyproject.toml` now carries the released
+  version, and two new contract tests
+  (`test_version_is_consistent_across_the_repository`,
+  `test_changelog_documents_the_current_version`) keep manifest, `const.VERSION`
+  and `pyproject.toml` from ever drifting apart again.
 - **Brand assets** (`custom_components/energy_guard/brand/`): `icon.png`,
   `icon@2x.png`, `logo.png` and `logo@2x.png`, shipped inside the integration
   so Home Assistant 2026.3+ shows them on the Integrations page, the device

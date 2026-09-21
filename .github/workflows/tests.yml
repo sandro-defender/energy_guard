@@ -1,0 +1,70 @@
+# Continuous integration for Energy Guard.
+#
+# Runs on every push to main and every pull request:
+#
+# * "tests"    - ruff (lint + format) and the full pytest suite on Python 3.13
+#                and 3.14, matching the pins in requirements_test.txt and the
+#                commands in docs/DEVELOPMENT.md. The JS smoke test runs too:
+#                ubuntu-latest runners ship with Node.
+# * "hassfest" - Home Assistant's own integration validator.
+# * "hacs"     - HACS repository/manifest validation.
+#
+# The suite is the source of truth (see docs/DEVELOPMENT.md): a change that is
+# not covered by a test is not ready, and a red job must block a merge.
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: uv venv --python ${{ matrix.python-version }} .venv
+
+      - name: Install test dependencies
+        run: uv pip install --python .venv/bin/python -r requirements_test.txt ruff
+
+      - name: Ruff lint
+        run: .venv/bin/ruff check .
+
+      - name: Ruff format
+        run: .venv/bin/ruff format --check .
+
+      - name: Run tests
+        run: .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL
+
+  hassfest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: hassfest validation
+        uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration

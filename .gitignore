@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Local manual-test Home Assistant configuration (see docs/DEVELOPMENT.md)
+ha-config/
+
+# Folders the integration can write when pointed at a development instance
+backups/
+reports/
