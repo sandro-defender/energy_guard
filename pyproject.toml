@@ -48,3 +48,9 @@ filterwarnings = [
 
 [tool.coverage.run]
 source = ["custom_components/energy_guard"]
+
+[tool.coverage.report]
+# CI enforces this floor (tests.yml runs pytest with --cov); raising it is a
+# one-way ratchet - new code keeps the suite at or above the current level.
+fail_under = 80
+show_missing = true
