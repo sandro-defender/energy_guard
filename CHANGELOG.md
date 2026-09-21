@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-21
+
 ### Added
 
 - **Tag-push release automation** (`.github/workflows/release.yml`): pushing a
@@ -56,19 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Repair tab lists candidates as preview → confirm cards with evidence
   chips. Covered by `tests/test_dashboard_data.py` and the extended Node
   smoke test.
-
-### Fixed
-
-- **Wrong repository link on the device page**: the "Visit" link opened a
-  placeholder repository because `hub.py` carried its own copy of the URL.
-  Every user-facing link is now derived from `const.REPOSITORY_URL`, and
-  `test_every_github_link_points_at_the_real_project` sweeps the whole
-  repository for any other `github.com` owner/name.
-
-## [1.1.0] - 2026-09-20
-
-### Added
-
 - **Config-entry migration layer** (`migrations.py`, `async_migrate_entry`):
   saved configurations of earlier versions are normalised on load, so option
   keys, entity ids and statistic ids keep working. Covered by
@@ -143,6 +132,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Wrong repository link on the device page**: the "Visit" link opened a
+  placeholder repository because `hub.py` carried its own copy of the URL.
+  Every user-facing link is now derived from `const.REPOSITORY_URL`, and
+  `test_every_github_link_points_at_the_real_project` sweeps the whole
+  repository for any other `github.com` owner/name.
 - **The options flow forms could not be used**: five of the seven sections raised
   a selector validation error as soon as the form was opened, so a protected
   sensor, a derived sensor, a utility meter, the statistics thresholds and the
