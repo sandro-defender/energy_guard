@@ -12,7 +12,8 @@
     "utility_meter",
     "energy",
     "frontend",
-    "panel_custom"
+    "panel_custom",
+    "http"
   ],
   "documentation": "https://github.com/sandro-defender/energy_guard",
   "integration_type": "service",

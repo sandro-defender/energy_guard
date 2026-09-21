@@ -319,6 +319,11 @@ def test_every_github_link_points_at_the_real_project() -> None:
     The device page once opened a wrong-cased placeholder repository because
     ``hub.py`` carried its own copy of the URL.  Every link is derived from
     ``const.REPOSITORY_URL`` now; this sweep fails on any other owner/name.
+
+    Exception: infrastructure/tool repositories referenced by CI and lint
+    configuration (GitHub Actions, pre-commit hooks).  Those are tool links,
+    not project links - anything added here must be developer tooling, never
+    documentation or a user-facing link.
     """
     from custom_components.energy_guard.const import REPOSITORY_URL
 
@@ -326,6 +331,13 @@ def test_every_github_link_points_at_the_real_project() -> None:
     owner, _, name = REPOSITORY_URL.partition("https://github.com/")[2].partition("/")
     assert owner, REPOSITORY_URL
     assert name, REPOSITORY_URL
+    tool_repos = {
+        ("actions", "checkout"),
+        ("astral-sh", "ruff-pre-commit"),
+        ("astral-sh", "setup-uv"),
+        ("hacs", "action"),
+        ("home-assistant", "actions"),
+    }
     skipped_dirs = {
         ".git",
         "__pycache__",
@@ -354,9 +366,10 @@ def test_every_github_link_points_at_the_real_project() -> None:
         for found_owner, found_name in link.findall(text):
             checked += 1
             found_name = found_name.removesuffix(".git")  # clone URLs
-            assert (found_owner, found_name) == (owner, name), (
-                f"{path}: github.com/{found_owner}/{found_name}"
-            )
+            assert (found_owner, found_name) == (owner, name) or (
+                found_owner,
+                found_name,
+            ) in tool_repos, f"{path}: github.com/{found_owner}/{found_name}"
     assert checked, "the sweep should see at least one repository link"
 
 
