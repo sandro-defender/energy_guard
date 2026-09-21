@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Tag-push release automation** (`.github/workflows/release.yml`): pushing a
+  version tag (`1.*`/`2.*`, no `v` prefix) re-runs ruff and the full test suite
+  on the tagged commit and publishes the GitHub release automatically, but only
+  when the tag equals `manifest.json`/`const.VERSION` and `CHANGELOG.md` has a
+  `## [<tag>]` section — that section becomes the release notes. No release is
+  ever created for a tag that fails a gate, and no existing tag or release is
+  moved or deleted.
 - **Project infrastructure**: GitHub Actions CI (`.github/workflows/tests.yml`)
   running ruff and the full test suite (Python 3.14, matching the pinned Home
   Assistant test harness) plus `hassfest` and HACS validation on every push and

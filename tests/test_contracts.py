@@ -118,6 +118,49 @@ def test_changelog_documents_the_current_version() -> None:
     )
 
 
+def test_release_workflow_gates_and_publishes_tag_pushes() -> None:
+    """The tag-push workflow only releases verified, documented versions.
+
+    Pushing a `1.*`/`2.*` tag must (1) re-run ruff and the full test suite on
+    the tagged commit, (2) refuse to publish unless the tag equals
+    ``manifest.json``/``const.VERSION`` and the CHANGELOG documents it, and
+    (3) publish the release with the CHANGELOG section as its notes. This is
+    what makes a tag the source of truth for HACS users, so the contract is
+    pinned here instead of living only in the workflow's comments.
+    """
+    workflow = yaml.safe_load(
+        (REPO_ROOT / ".github" / "workflows" / "release.yml").read_text()
+    )
+    assert workflow["name"] == "Release"
+
+    # The repository tags without a `v` prefix (`1.0.0`, ...): the trigger must
+    # match bare semver-ish tags, and only those. (YAML parses the workflow's
+    # `on:` key as the boolean True, hence the lookup below.)
+    tags = workflow[True]["push"]["tags"]
+    assert "1.*" in tags
+    assert "2.*" in tags
+
+    steps = workflow["jobs"]["gates"]["steps"]
+    runs = " \n".join(step.get("run", "") for step in steps)
+
+    # Quality gates run on the tagged commit before anything is published.
+    assert "ruff check ." in runs
+    assert "ruff format --check ." in runs
+    assert "pytest tests/" in runs
+
+    # Release gates: tag == manifest version == const.VERSION, and the
+    # CHANGELOG must document the tag. Both failures exit non-zero (no release).
+    assert "manifest.json" in runs
+    assert "const" in runs
+    assert "CHANGELOG.md" in runs
+    assert "gh release create" in runs
+    assert "--notes-file release_notes.md" in runs
+
+    # The notes are carved out of the CHANGELOG, not written free-hand.
+    assert "awk" in runs
+    assert "release_notes.md" in runs
+
+
 def test_every_service_is_registered_documented_and_translated(
     services_yaml: dict, strings: dict
 ) -> None:
