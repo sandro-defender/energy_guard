@@ -62,9 +62,25 @@ jobs:
 
 
       - name: Install test dependencies
-        run: >-
-          uv pip install --python .venv/bin/python
-          -r ${{ matrix.requirements }} ruff
+        run: |
+          set -o pipefail
+          uv pip install --python .venv/bin/python \
+              -r ${{ matrix.requirements }} ruff 2>&1 | tee install.log
+
+      - name: Surface install failures
+        if: failure()
+        run: |
+          [ -f install.log ] || { echo "no install.log"; exit 0; }
+          {
+            echo "### Dependency install failed (${{ matrix.name }})"
+            echo ""
+            echo '```'
+            tail -40 install.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          tail -15 install.log | while IFS= read -r line; do
+            echo "::error::install: $line"
+          done
 
       - name: Ruff lint
         run: .venv/bin/ruff check .
