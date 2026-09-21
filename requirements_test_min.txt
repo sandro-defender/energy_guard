@@ -8,3 +8,8 @@
 # they drift apart.
 pytest-homeassistant-custom-component==0.13.246
 freezegun
+# Home Assistant 2025.5 pins aiodns 3.5.0, whose class-level annotations
+# reference pycares attributes that pycares 5.x removed (AttributeError at
+# import time: 'pycares' has no attribute 'ares_query_a_result'). Keep the
+# resolver below that break - this only affects the test environment.
+pycares<5
