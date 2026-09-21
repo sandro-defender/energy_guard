@@ -14,6 +14,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import Event, HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DATA_HUBS, DOMAIN, NAME, PLATFORMS, VERSION
@@ -31,6 +32,10 @@ from .websocket import (
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORM_LIST = [Platform.SENSOR, Platform.BINARY_SENSOR]
+
+# Energy Guard is set up exclusively from a config entry (no YAML options);
+# this schema rejects YAML configuration under the `energy_guard:` key.
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 __all__ = [
     "DOMAIN",

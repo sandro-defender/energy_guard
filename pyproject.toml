@@ -1,6 +1,6 @@
 [project]
 name = "energy-guard"
-version = "1.0.0"
+version = "1.1.0"
 description = "Protect and repair Home Assistant Energy Dashboard statistics"
 readme = "README.md"
 requires-python = ">=3.13"

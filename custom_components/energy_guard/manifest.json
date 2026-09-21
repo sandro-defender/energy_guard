@@ -1,23 +1,24 @@
 {
   "domain": "energy_guard",
   "name": "Energy Guard",
-  "codeowners": [
-    "@sandro-defender"
-  ],
-  "config_flow": true,
-  "single_config_entry": true,
-  "dependencies": [],
   "after_dependencies": [
     "recorder",
     "utility_meter",
     "energy",
     "frontend",
-    "panel_custom"
+    "panel_custom",
+    "http"
   ],
+  "codeowners": [
+    "@sandro-defender"
+  ],
+  "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/sandro-defender/energy_guard",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/sandro-defender/energy_guard/issues",
   "requirements": [],
+  "single_config_entry": true,
   "version": "1.1.0"
 }

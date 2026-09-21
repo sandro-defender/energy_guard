@@ -12,6 +12,7 @@ import ast
 import json
 import re
 import struct
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -86,6 +87,35 @@ def test_hacs_metadata_points_at_the_component() -> None:
     assert hacs["render_readme"] is True
     assert hacs["content_in_root"] is False
     assert (COMPONENT_DIR / "manifest.json").exists()
+
+
+def test_version_is_consistent_across_the_repository() -> None:
+    """manifest.json, const.VERSION and pyproject.toml carry the same version.
+
+    The manifest version is what HACS shows users, the git tag is what turns a
+    commit into a HACS release, and pyproject is what development tooling sees.
+    When they drift, users stop receiving updates - this test makes that loud.
+    """
+    manifest = json.loads((COMPONENT_DIR / "manifest.json").read_text())
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+
+    assert manifest["version"] == VERSION
+    assert pyproject["project"]["version"] == VERSION
+
+
+def test_changelog_documents_the_current_version() -> None:
+    """The CHANGELOG has a section for the released version.
+
+    Keep a Changelog style: `## [X.Y.Z] - date`. If this fails after a version
+    bump, either the changelog is missing the release section or VERSION was
+    bumped by mistake.
+    """
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text()
+    pattern = rf"^## \[{re.escape(VERSION)}\]"
+    assert re.search(pattern, changelog, re.MULTILINE), (
+        f"CHANGELOG.md has no '## [{VERSION}]' section; bumping the version "
+        "requires a changelog entry."
+    )
 
 
 def test_every_service_is_registered_documented_and_translated(
@@ -289,6 +319,11 @@ def test_every_github_link_points_at_the_real_project() -> None:
     The device page once opened a wrong-cased placeholder repository because
     ``hub.py`` carried its own copy of the URL.  Every link is derived from
     ``const.REPOSITORY_URL`` now; this sweep fails on any other owner/name.
+
+    Exception: infrastructure/tool repositories referenced by CI and lint
+    configuration (GitHub Actions, pre-commit hooks).  Those are tool links,
+    not project links - anything added here must be developer tooling, never
+    documentation or a user-facing link.
     """
     from custom_components.energy_guard.const import REPOSITORY_URL
 
@@ -296,6 +331,13 @@ def test_every_github_link_points_at_the_real_project() -> None:
     owner, _, name = REPOSITORY_URL.partition("https://github.com/")[2].partition("/")
     assert owner, REPOSITORY_URL
     assert name, REPOSITORY_URL
+    tool_repos = {
+        ("actions", "checkout"),
+        ("astral-sh", "ruff-pre-commit"),
+        ("astral-sh", "setup-uv"),
+        ("hacs", "action"),
+        ("home-assistant", "actions"),
+    }
     skipped_dirs = {
         ".git",
         "__pycache__",
@@ -324,9 +366,10 @@ def test_every_github_link_points_at_the_real_project() -> None:
         for found_owner, found_name in link.findall(text):
             checked += 1
             found_name = found_name.removesuffix(".git")  # clone URLs
-            assert (found_owner, found_name) == (owner, name), (
-                f"{path}: github.com/{found_owner}/{found_name}"
-            )
+            assert (found_owner, found_name) == (owner, name) or (
+                found_owner,
+                found_name,
+            ) in tool_repos, f"{path}: github.com/{found_owner}/{found_name}"
     assert checked, "the sweep should see at least one repository link"
 
 

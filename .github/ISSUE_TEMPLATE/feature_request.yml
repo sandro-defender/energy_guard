@@ -1,0 +1,29 @@
+name: Feature idea
+description: Suggest an improvement or a new capability.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to achieve? What works badly or not at all today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should Energy Guard do, from the user's point of view?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: markdown
+    attributes:
+      value: |
+        Note: Energy Guard never changes data automatically. Feature ideas that
+        weaken the safety model (auto-repair without confirmation, editing
+        foreign entities, writing YAML) will be rejected - but ideas that make
+        the safety model *easier to use* are very welcome.

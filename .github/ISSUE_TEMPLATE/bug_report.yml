@@ -1,0 +1,76 @@
+name: Bug report
+description: Something does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Energy Guard is a
+        data-safety tool - if you believe a repair/protection change touched
+        data it should not have, please mention that in the first field so it
+        can be treated as a safety issue.
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      description: Settings -> About -> e.g. 2026.9.2
+      placeholder: 2026.9.2
+    validations:
+      required: true
+  - type: input
+    id: eg_version
+    attributes:
+      label: Energy Guard version
+      description: HACS -> Energy Guard, or Settings -> Devices & Services -> Energy Guard
+      placeholder: 1.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: How did you install Energy Guard?
+      options:
+        - HACS
+        - Manual copy into custom_components/
+    validations:
+      required: true
+  - type: dropdown
+    id: recorder
+    attributes:
+      label: Is the recorder integration running?
+      description: Statistics scan/repair need it; protection alone works without it.
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the service calls or panel actions involved.
+      placeholder: |
+        1. Configure protected sensor sensor.grid_import
+        2. Run energy_guard.scan_statistics
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines
+      description: Settings -> System -> Logs, search for `energy_guard`. Paste between the backticks.
+      render: shell
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Dashboard/Energy screenshots help a lot for repair questions.
