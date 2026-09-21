@@ -52,5 +52,9 @@ source = ["custom_components/energy_guard"]
 [tool.coverage.report]
 # CI enforces this floor (tests.yml runs pytest with --cov); raising it is a
 # one-way ratchet - new code keeps the suite at or above the current level.
-fail_under = 80
+# The pinned suite measured 90% on 2026-09-21; the floor sits one point below
+# so normal churn (Home Assistant patch bumps changing a handful of lines)
+# cannot flip CI red without a real coverage regression.
+fail_under = 89
+precision = 2
 show_missing = true

@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Test coverage in CI**: the Tests workflow now runs the suite under
   `pytest-cov`, publishes the per-module report and the total in the job
   summary, and fails any run that drops below the `fail_under` floor declared
-  in `pyproject.toml` (`[tool.coverage.report]`). Pinned by the contract test
-  `test_ci_measures_coverage_and_publishes_it`; the floor can only ever be
-  raised.
+  in `pyproject.toml` (`[tool.coverage.report]`). The pinned suite measures
+  90%; the floor is `89` (one point of headroom) and can only ever be raised.
+  Enforced by the contract test
+  `test_ci_measures_coverage_and_publishes_it`.
 
 ## [1.1.0] - 2026-09-21
 

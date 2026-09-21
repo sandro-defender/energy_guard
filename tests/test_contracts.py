@@ -183,10 +183,11 @@ def test_ci_measures_coverage_and_publishes_it() -> None:
     assert "pytest-cov" in requirements
 
     # The floor is declared once, in pyproject.toml, where pytest-cov reads it.
-    # 80 is the historic minimum; the real bar is whatever pyproject declares.
+    # The pinned suite measured 90% on 2026-09-21; 89 (one point of headroom)
+    # is a one-way ratchet and must never be lowered.
     pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
     floor = pyproject["tool"]["coverage"]["report"]["fail_under"]
-    assert floor >= 80, "the coverage floor must never be lowered"
+    assert floor >= 89, "the coverage floor must never be lowered"
 
 
 def test_every_service_is_registered_documented_and_translated(
