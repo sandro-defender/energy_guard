@@ -45,7 +45,7 @@ jobs:
             requirements: requirements_test.txt
             coverage: true
           - name: "HA 2026.3 (verified minimum)"
-            python-version: "3.13"
+            python-version: "3.14"
             requirements: requirements_test_min.txt
             coverage: false
     steps:
