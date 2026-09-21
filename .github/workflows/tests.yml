@@ -5,7 +5,7 @@
 # * "tests"    - ruff (lint + format) and the full pytest suite at both ends
 #                of the supported Home Assistant range: the newest release the
 #                pinned harness follows (Python 3.14, requirements_test.txt)
-#                and the oldest release hacs.json claims - 2025.5.0, Python
+#                and the oldest release hacs.json claims - 2025.8.0, Python
 #                3.13, requirements_test_min.txt. The JS smoke test runs too:
 #                ubuntu-latest runners ship with Node. Coverage is measured on
 #                the newest-HA job and must stay above the fail-under floor
@@ -34,7 +34,7 @@ jobs:
       matrix:
         # One job per end of the supported range. The newest Home Assistant
         # (requirements_test.txt) requires Python 3.14 at runtime (see
-        # docs/DEVELOPMENT.md); the declared minimum 2025.5.0 runs on 3.13
+        # docs/DEVELOPMENT.md); the verified minimum 2025.8.0 runs on 3.13
         # with the matching pinned harness (requirements_test_min.txt), which
         # is what proves the compatibility claim hacs.json makes to HACS
         # users. Coverage is enforced on the newest-HA job only: it is the
@@ -44,7 +44,7 @@ jobs:
             python-version: "3.14"
             requirements: requirements_test.txt
             coverage: true
-          - name: "HA 2025.5 (declared minimum)"
+          - name: "HA 2025.8 (verified minimum)"
             python-version: "3.13"
             requirements: requirements_test_min.txt
             coverage: false

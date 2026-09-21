@@ -90,11 +90,13 @@ def test_hacs_metadata_points_at_the_component() -> None:
 
 
 #: The oldest Home Assistant the suite verifies. requirements_test_min.txt
-#: pins pytest-homeassistant-custom-component 0.13.246, which ships
-#: homeassistant 2025.5.3 (the last patch of the declared minimum release),
-#: and the CI "declared minimum" job runs the whole suite against it.
-TESTED_MINIMUM_HOME_ASSISTANT = "2025.5.0"
-MINIMUM_HARNESS_PIN = "pytest-homeassistant-custom-component==0.13.246"
+#: pins pytest-homeassistant-custom-component 0.13.272, which ships
+#: homeassistant 2025.8.3 (the last patch of the declared minimum release),
+#: and the CI "verified minimum" job runs the whole suite against it. The
+#: minimum is 2025.8 because options_flow.py subclasses OptionsFlowWithReload,
+#: which Home Assistant added in 2025.8 (home-assistant/core#146910).
+TESTED_MINIMUM_HOME_ASSISTANT = "2025.8.0"
+MINIMUM_HARNESS_PIN = "pytest-homeassistant-custom-component==0.13.272"
 
 
 def test_the_declared_home_assistant_minimum_is_the_tested_minimum() -> None:

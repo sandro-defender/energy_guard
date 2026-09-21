@@ -7,7 +7,7 @@
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/sandro-defender/energy_guard)
 [![GitHub Release](https://img.shields.io/github/release/sandro-defender/energy_guard.svg)](https://github.com/sandro-defender/energy_guard/releases)
 [![Tests](https://img.shields.io/github/actions/workflow/status/sandro-defender/energy_guard/tests.yml?label=tests)](https://github.com/sandro-defender/energy_guard/actions)
-[![Home Assistant](https://img.shields.io/badge/Home_Assistant-2025.5+-41BDF5.svg)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home_Assistant-2025.8+-41BDF5.svg)](https://www.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Energy Guard protects your Home Assistant Energy Dashboard from reconnect

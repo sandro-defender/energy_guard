@@ -38,7 +38,7 @@ test suite.
 
 ## Requirements
 
-* Home Assistant **2025.5.0** or newer (the minimum in `hacs.json`).
+* Home Assistant **2025.8.0** or newer (the minimum in `hacs.json`).
 * Only **core** Home Assistant cards are used (`markdown`, `entities`,
   `conditional`, `history-graph`, `statistics-graph`, `button`), so no
   dashboard resources, HACS frontend plugins or custom cards are needed.

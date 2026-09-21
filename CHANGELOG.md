@@ -17,11 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `test_ci_measures_coverage_and_publishes_it`.
 - **Verified compatibility with the oldest supported Home Assistant**: CI now
   runs the full suite against both ends of the supported range - the newest
-  release (Python 3.14) and the declared `hacs.json` minimum `2025.5.0`
-  (Python 3.13, through the matching harness pin in
-  `requirements_test_min.txt`). The contract test
+  release (Python 3.14) and the verified minimum (Python 3.13, through the
+  matching harness pin in `requirements_test_min.txt`).
+- **Corrected the declared Home Assistant minimum to `2025.8.0`**: the new
+  oldest-HA job proved that `hacs.json`'s previous `2025.5.0` claim was
+  untested and false - `options_flow.py` subclasses `OptionsFlowWithReload`,
+  which Home Assistant added in 2025.8 (home-assistant/core#146910), so the
+  integration cannot even import on 2025.5-2025.7. The minimum, the README
+  badge and `docs/DASHBOARD.md` now state `2025.8.0`, and the contract test
   `test_the_declared_home_assistant_minimum_is_the_tested_minimum` keeps the
-  declared minimum from ever outrunning the tested one.
+  declared minimum from ever outrunning the tested one again.
 
 ## [1.1.0] - 2026-09-21
 
