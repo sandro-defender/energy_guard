@@ -1,0 +1,153 @@
+# Tag-push release automation for Energy Guard.
+#
+# Pushing a tag matching `1.*` or `2.*` (the repository uses tags without a
+# `v` prefix: `1.0.0`, `1.0.1`, `1.0.2`, ...) runs the full quality gates on
+# the tagged commit - ruff lint/format and the complete pytest suite - and
+# then publishes a GitHub Release, but ONLY when every release gate holds:
+#
+# * the tag equals `manifest.json:version` and `custom_components/energy_guard/const.py`
+#   (`const.VERSION`), and
+# * `CHANGELOG.md` has a `## [<tag>]` section.
+#
+# That CHANGELOG section becomes the release notes, so what HACS users see in
+# the release is exactly what the contract tests already require developers
+# to keep up to date (tests/test_contracts.py).
+#
+# Nothing here ever moves or deletes an existing tag or release: a gate
+# failure simply means no release is created for that tag.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "1.*"
+      - "2.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. 1.2.0) - must exist"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.14"
+
+jobs:
+  gates:
+    name: Quality gates + release checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Record the release tag
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "Release tag: $TAG"
+
+      - name: Verify the tag points at this checkout
+        if: github.event_name == 'push'
+        run: |
+          ACTUAL="$(git rev-parse HEAD)"
+          EXPECTED="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}" 2>/dev/null || true)"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Checked-out commit $ACTUAL does not match tag ${RELEASE_TAG} ($EXPECTED)"
+            exit 1
+          fi
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Create virtual environment
+        run: uv venv --python ${{ env.PYTHON_VERSION }} .venv
+
+      - name: Install test dependencies
+        run: uv pip install --python .venv/bin/python -r requirements_test.txt ruff
+
+      - name: Ruff lint
+        run: .venv/bin/ruff check .
+
+      - name: Ruff format
+        run: .venv/bin/ruff format --check .
+
+      - name: Run tests
+        run: .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL
+
+      - name: Release gate - tag must equal the integration version
+        run: |
+          MANIFEST_VERSION="$(.venv/bin/python -c 'import json; print(json.load(open("custom_components/energy_guard/manifest.json"))["version"])')"
+          CONST_VERSION="$(.venv/bin/python -c 'import importlib.util, pathlib; spec = importlib.util.spec_from_file_location("energy_guard_const", pathlib.Path("custom_components/energy_guard/const.py")); mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); print(mod.VERSION)')"
+          echo "manifest.json version : $MANIFEST_VERSION"
+          echo "const.VERSION         : $CONST_VERSION"
+          echo "tag                   : $RELEASE_TAG"
+          if [ "$RELEASE_TAG" != "$MANIFEST_VERSION" ]; then
+            echo "::error::Tag ${RELEASE_TAG} does not match manifest.json version ${MANIFEST_VERSION} - no release will be created."
+            exit 1
+          fi
+          if [ "$RELEASE_TAG" != "$CONST_VERSION" ]; then
+            echo "::error::Tag ${RELEASE_TAG} does not match const.VERSION ${CONST_VERSION} - no release will be created."
+            exit 1
+          fi
+
+      - name: Release gate - CHANGELOG must document this version
+        run: |
+          if ! grep -q "^## \[${RELEASE_TAG}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${RELEASE_TAG}]' section - no release will be created."
+            exit 1
+          fi
+          echo "CHANGELOG.md documents ${RELEASE_TAG}."
+
+      - name: Extract the release notes from CHANGELOG.md
+        run: |
+          awk -v ver="[$RELEASE_TAG]" '
+            $0 ~ "^## " && found { exit }
+            found { print; next }
+            $0 ~ "^## " { if (index($0, ver) == 4) { found = 1; next } }
+          ' CHANGELOG.md > release_notes.md
+          echo "--- release notes for ${RELEASE_TAG} ---"
+          cat release_notes.md
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --target "$(git rev-parse HEAD)" \
+            --title "$RELEASE_TAG" \
+            --notes-file release_notes.md
+          echo "Published release ${RELEASE_TAG}."
+
+  report:
+    name: Summary
+    needs: gates
+    runs-on: ubuntu-latest
+    if: always() && !cancelled()
+    steps:
+      - name: Job summary
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if [ "${{ needs.gates.result }}" = "success" ]; then
+            echo "### Release $TAG published" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Quality gates (ruff + full test suite) passed on the tagged commit," >> "$GITHUB_STEP_SUMMARY"
+            echo "the tag matched \`manifest.json\`/\`const.VERSION\` and \`CHANGELOG.md\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "documented the release, so the GitHub release was created automatically." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### No release for tag $TAG" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "The gates job finished with result \`${{ needs.gates.result }}\`." >> "$GITHUB_STEP_SUMMARY"
+            echo "Either a quality gate (ruff / tests) failed on the tagged commit," >> "$GITHUB_STEP_SUMMARY"
+            echo "or a release gate did not hold (tag != manifest/const version, or no" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`## [$TAG]\` section in CHANGELOG.md). Nothing was published and no" >> "$GITHUB_STEP_SUMMARY"
+            echo "existing tag or release was touched." >> "$GITHUB_STEP_SUMMARY"
+          fi
