@@ -11,9 +11,9 @@ weaken.
 
 | Tool | Version | Notes |
 | --- | --- | --- |
-| Python | 3.13+ (CI uses 3.14) | Home Assistant 2026.x requires 3.14 at runtime; the code itself stays 3.13-compatible |
+| Python | 3.13+ (CI uses 3.13 and 3.14) | Home Assistant 2026.x requires 3.14 at runtime; the code itself stays 3.13-compatible |
 | `uv` (recommended) | any | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| Home Assistant | `2026.9.x` for the pinned test suite | pulled in by `pytest-homeassistant-custom-component` |
+| Home Assistant | `2026.9.x` (newest) and `2025.5.x` (declared minimum) | CI runs the suite against both ends of the range; each is pulled in by a pinned `pytest-homeassistant-custom-component` (`requirements_test.txt` / `requirements_test_min.txt`) |
 | `ruff` | recent | lint + format, configured in `pyproject.toml` |
 
 The runtime dependency list of the integration is intentionally empty

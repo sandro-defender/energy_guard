@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   90%; the floor is `89` (one point of headroom) and can only ever be raised.
   Enforced by the contract test
   `test_ci_measures_coverage_and_publishes_it`.
+- **Verified compatibility with the oldest supported Home Assistant**: CI now
+  runs the full suite against both ends of the supported range - the newest
+  release (Python 3.14) and the declared `hacs.json` minimum `2025.5.0`
+  (Python 3.13, through the matching harness pin in
+  `requirements_test_min.txt`). The contract test
+  `test_the_declared_home_assistant_minimum_is_the_tested_minimum` keeps the
+  declared minimum from ever outrunning the tested one.
 
 ## [1.1.0] - 2026-09-21
 

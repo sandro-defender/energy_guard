@@ -1,0 +1,10 @@
+# Test requirements for the OLDEST Home Assistant Energy Guard claims to
+# support ("homeassistant": "2025.5.0" in hacs.json).
+#
+# pytest-homeassistant-custom-component 0.13.246 ships homeassistant 2025.5.3
+# (the last patch of the declared minimum release). Keep this pin and the
+# hacs.json minimum in lockstep - the contract test
+# test_the_declared_home_assistant_minimum_is_the_tested_minimum fails when
+# they drift apart.
+pytest-homeassistant-custom-component==0.13.246
+freezegun

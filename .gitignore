@@ -9,6 +9,7 @@ venv/
 
 # Test / lint caches
 .pytest_cache/
+pytest.log
 .ruff_cache/
 .mypy_cache/
 .coverage

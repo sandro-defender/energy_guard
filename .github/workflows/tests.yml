@@ -2,12 +2,15 @@
 #
 # Runs on every push to main and every pull request:
 #
-# * "tests"    - ruff (lint + format) and the full pytest suite on Python 3.13
-#                and 3.14, matching the pins in requirements_test.txt and the
-#                commands in docs/DEVELOPMENT.md. The JS smoke test runs too:
+# * "tests"    - ruff (lint + format) and the full pytest suite at both ends
+#                of the supported Home Assistant range: the newest release the
+#                pinned harness follows (Python 3.14, requirements_test.txt)
+#                and the oldest release hacs.json claims - 2025.5.0, Python
+#                3.13, requirements_test_min.txt. The JS smoke test runs too:
 #                ubuntu-latest runners ship with Node. Coverage is measured on
-#                every run and must stay above the fail-under floor declared
-#                in pyproject.toml; the result is printed in the job summary.
+#                the newest-HA job and must stay above the fail-under floor
+#                declared in pyproject.toml; the result is printed in the job
+#                summary.
 # * "hassfest" - Home Assistant's own integration validator.
 # * "hacs"     - HACS repository/manifest validation.
 #
@@ -24,15 +27,27 @@ on:
 
 jobs:
   tests:
+    name: Tests - ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        # The pinned pytest-homeassistant-custom-component follows Home
-        # Assistant 2026.x, which requires Python 3.14 at runtime (see
-        # docs/DEVELOPMENT.md). 3.13 compatibility of the source itself is
-        # enforced by ruff (target-version = py313), not by an install job.
-        python-version: ["3.14"]
+        # One job per end of the supported range. The newest Home Assistant
+        # (requirements_test.txt) requires Python 3.14 at runtime (see
+        # docs/DEVELOPMENT.md); the declared minimum 2025.5.0 runs on 3.13
+        # with the matching pinned harness (requirements_test_min.txt), which
+        # is what proves the compatibility claim hacs.json makes to HACS
+        # users. Coverage is enforced on the newest-HA job only: it is the
+        # authoritative measurement (the floor lives in pyproject.toml).
+        include:
+          - name: "HA 2026.9 (newest)"
+            python-version: "3.14"
+            requirements: requirements_test.txt
+            coverage: true
+          - name: "HA 2025.5 (declared minimum)"
+            python-version: "3.13"
+            requirements: requirements_test_min.txt
+            coverage: false
     steps:
       - uses: actions/checkout@v7
 
@@ -47,7 +62,9 @@ jobs:
 
 
       - name: Install test dependencies
-        run: uv pip install --python .venv/bin/python -r requirements_test.txt ruff
+        run: >-
+          uv pip install --python .venv/bin/python
+          -r ${{ matrix.requirements }} ruff
 
       - name: Ruff lint
         run: .venv/bin/ruff check .
@@ -56,12 +73,26 @@ jobs:
         run: .venv/bin/ruff format --check .
 
       - name: Run tests with coverage
+        if: matrix.coverage
         run: >-
           .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL
           --cov --cov-report=term-missing --cov-report=json
 
+      - name: Run tests
+        if: ${{ !matrix.coverage }}
+        run: |
+          set -o pipefail
+          .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL \
+              2>&1 | tee pytest.log
+
+      - name: Surface test failures as annotations
+        if: ${{ !matrix.coverage && failure() }}
+        run: |
+          grep -E "^(FAILED|ERROR)|- short test summary" pytest.log | head -50 | \
+          while IFS= read -r line; do echo "::error::$line"; done
+
       - name: Publish coverage (job summary)
-        if: always()
+        if: ${{ always() && matrix.coverage }}
         run: |
           if [ ! -f coverage.json ]; then
             echo "Coverage report was not produced." >> "$GITHUB_STEP_SUMMARY"

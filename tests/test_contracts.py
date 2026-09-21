@@ -89,6 +89,44 @@ def test_hacs_metadata_points_at_the_component() -> None:
     assert (COMPONENT_DIR / "manifest.json").exists()
 
 
+#: The oldest Home Assistant the suite verifies. requirements_test_min.txt
+#: pins pytest-homeassistant-custom-component 0.13.246, which ships
+#: homeassistant 2025.5.3 (the last patch of the declared minimum release),
+#: and the CI "declared minimum" job runs the whole suite against it.
+TESTED_MINIMUM_HOME_ASSISTANT = "2025.5.0"
+MINIMUM_HARNESS_PIN = "pytest-homeassistant-custom-component==0.13.246"
+
+
+def test_the_declared_home_assistant_minimum_is_the_tested_minimum() -> None:
+    """hacs.json must never claim more compatibility than CI verifies.
+
+    The `homeassistant` minimum is user-facing: HACS refuses to install or
+    update below it. The claim is verified by running the full suite against
+    the oldest supported release (requirements_test_min.txt plus the
+    "declared minimum" job in tests.yml). Bumping either side means bumping
+    the other - an untested compatibility claim is how one-star issues are
+    born.
+    """
+    hacs = json.loads((REPO_ROOT / "hacs.json").read_text())
+    assert hacs["homeassistant"] == TESTED_MINIMUM_HOME_ASSISTANT
+
+    requirements = (REPO_ROOT / "requirements_test_min.txt").read_text()
+    assert MINIMUM_HARNESS_PIN in requirements
+
+    workflow = yaml.safe_load(
+        (REPO_ROOT / ".github" / "workflows" / "tests.yml").read_text()
+    )
+    includes = workflow["jobs"]["tests"]["strategy"]["matrix"]["include"]
+    minimum_jobs = [entry for entry in includes if not entry["coverage"]]
+    assert minimum_jobs, "CI must test the declared minimum Home Assistant"
+    assert minimum_jobs[0]["requirements"] == "requirements_test_min.txt"
+
+    # The README badge advertises the same minimum.
+    readme = (REPO_ROOT / "README.md").read_text()
+    major_minor = TESTED_MINIMUM_HOME_ASSISTANT.rsplit(".", 1)[0]
+    assert f"Home_Assistant-{major_minor}+" in readme
+
+
 def test_version_is_consistent_across_the_repository() -> None:
     """manifest.json, const.VERSION and pyproject.toml carry the same version.
 
