@@ -62,6 +62,17 @@ Never point that at your production configuration directory.
 * The full suite is fast (a few seconds).  Run it before every commit - a change
   that is not covered by a test is not ready.
 
+Coverage is measured on every CI run (`pytest-cov`, see
+`.github/workflows/tests.yml`): the per-module report and the total are printed
+in the job summary, and the run fails below the `fail_under` floor declared in
+`pyproject.toml` (`[tool.coverage.report]`).  Reproduce the measurement locally
+with:
+
+```bash
+.venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL \
+    --cov --cov-report=term-missing
+```
+
 ### Test map
 
 | File | Covers |

@@ -161,6 +161,35 @@ def test_release_workflow_gates_and_publishes_tag_pushes() -> None:
     assert "release_notes.md" in runs
 
 
+def test_ci_measures_coverage_and_publishes_it() -> None:
+    """The CI test job runs under coverage and shows the result.
+
+    A coverage number that is never measured drifts silently; a data-safety
+    tool should show its proof. The suite must run with ``--cov``, produce a
+    machine-readable report, publish the total in the job summary, and pin
+    ``pytest-cov`` in the test requirements so the measurement cannot vanish.
+    """
+    workflow = yaml.safe_load(
+        (REPO_ROOT / ".github" / "workflows" / "tests.yml").read_text()
+    )
+    steps = workflow["jobs"]["tests"]["steps"]
+    runs = " \n".join(step.get("run", "") for step in steps)
+
+    assert "--cov" in runs
+    assert "--cov-report=json" in runs
+    assert "GITHUB_STEP_SUMMARY" in runs
+
+    requirements = (REPO_ROOT / "requirements_test.txt").read_text()
+    assert "pytest-cov" in requirements
+
+    # The floor is declared once, in pyproject.toml, where pytest-cov reads it.
+    # The pinned suite measured 90% on 2026-09-21; 89 (one point of headroom)
+    # is a one-way ratchet and must never be lowered.
+    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+    floor = pyproject["tool"]["coverage"]["report"]["fail_under"]
+    assert floor >= 89, "the coverage floor must never be lowered"
+
+
 def test_every_service_is_registered_documented_and_translated(
     services_yaml: dict, strings: dict
 ) -> None:

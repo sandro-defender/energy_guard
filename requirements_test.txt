@@ -3,3 +3,6 @@
 # so installing it pulls in everything the tests need.
 pytest-homeassistant-custom-component==0.13.366
 freezegun
+# Coverage is measured in CI (tests.yml) and enforced against the floor in
+# pyproject.toml ([tool.coverage.report] fail_under).
+pytest-cov==7.1.0

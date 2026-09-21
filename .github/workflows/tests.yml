@@ -5,7 +5,9 @@
 # * "tests"    - ruff (lint + format) and the full pytest suite on Python 3.13
 #                and 3.14, matching the pins in requirements_test.txt and the
 #                commands in docs/DEVELOPMENT.md. The JS smoke test runs too:
-#                ubuntu-latest runners ship with Node.
+#                ubuntu-latest runners ship with Node. Coverage is measured on
+#                every run and must stay above the fail-under floor declared
+#                in pyproject.toml; the result is printed in the job summary.
 # * "hassfest" - Home Assistant's own integration validator.
 # * "hacs"     - HACS repository/manifest validation.
 #
@@ -53,8 +55,26 @@ jobs:
       - name: Ruff format
         run: .venv/bin/ruff format --check .
 
-      - name: Run tests
-        run: .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL
+      - name: Run tests with coverage
+        run: >-
+          .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL
+          --cov --cov-report=term-missing --cov-report=json
+
+      - name: Publish coverage (job summary)
+        if: always()
+        run: |
+          if [ ! -f coverage.json ]; then
+            echo "Coverage report was not produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          TOTAL="$(.venv/bin/python -c 'import json; print(json.load(open("coverage.json"))["totals"]["percent_covered_display"])')"
+          echo "### Test coverage: ${TOTAL}%" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Measured over \`custom_components/energy_guard\` (see" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`[tool.coverage]\` in \`pyproject.toml\`)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          .venv/bin/python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::Test coverage: ${TOTAL}%"
 
   hassfest:
     runs-on: ubuntu-latest
