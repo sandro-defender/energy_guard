@@ -10,6 +10,7 @@ venv/
 # Test / lint caches
 .pytest_cache/
 pytest.log
+install.log
 .ruff_cache/
 .mypy_cache/
 .coverage

@@ -67,21 +67,6 @@ jobs:
           uv pip install --python .venv/bin/python \
               -r ${{ matrix.requirements }} ruff 2>&1 | tee install.log
 
-      - name: Surface install failures
-        if: failure()
-        run: |
-          [ -f install.log ] || { echo "no install.log"; exit 0; }
-          {
-            echo "### Dependency install failed (${{ matrix.name }})"
-            echo ""
-            echo '```'
-            tail -40 install.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          tail -15 install.log | while IFS= read -r line; do
-            echo "::error::install: $line"
-          done
-
       - name: Ruff lint
         run: .venv/bin/ruff check .
 
@@ -90,22 +75,40 @@ jobs:
 
       - name: Run tests with coverage
         if: matrix.coverage
-        run: >-
-          .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL
-          --cov --cov-report=term-missing --cov-report=json
+        run: |
+          set -o pipefail
+          .venv/bin/python -m pytest tests/ -q -ra --log-cli-level=CRITICAL \
+              --cov --cov-report=term-missing --cov-report=json \
+              2>&1 | tee pytest.log
 
       - name: Run tests
         if: ${{ !matrix.coverage }}
         run: |
           set -o pipefail
-          .venv/bin/python -m pytest tests/ -q --log-cli-level=CRITICAL \
+          .venv/bin/python -m pytest tests/ -q -ra --log-cli-level=CRITICAL \
               2>&1 | tee pytest.log
 
-      - name: Surface test failures as annotations
-        if: ${{ !matrix.coverage && failure() }}
+      - name: Surface failures as annotations
+        if: failure()
         run: |
-          grep -E "^(FAILED|ERROR)|- short test summary" pytest.log | head -50 | \
-          while IFS= read -r line; do echo "::error::$line"; done
+          # Encode the tail of the most recent log into a single annotation
+          # so the failure reason is visible without downloading the full
+          # log (job summaries keep the same tail for later inspection).
+          LOG=install.log
+          [ -f pytest.log ] && LOG=pytest.log
+          if [ ! -f "$LOG" ]; then
+            echo "::error::${{ matrix.name }} failed before any log was written"
+            exit 0
+          fi
+          ENCODED="$(tail -45 "$LOG" | sed ':a;N;$!ba;s/\n/%0A/g')"
+          echo "::error title=Failed (${{ matrix.name }}), tail of $LOG::$ENCODED"
+          {
+            echo "### Failure details (${{ matrix.name }})"
+            echo ""
+            echo '```'
+            tail -60 "$LOG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish coverage (job summary)
         if: ${{ always() && matrix.coverage }}
