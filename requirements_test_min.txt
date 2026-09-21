@@ -1,5 +1,5 @@
 # Test requirements for the OLDEST Home Assistant Energy Guard supports
-# ("homeassistant": "2025.8.0" in hacs.json).
+# ("homeassistant": "2026.3.0" in hacs.json).
 #
 # The minimum is 2025.8 because options_flow.py subclasses
 # OptionsFlowWithReload, which Home Assistant added in 2025.8
@@ -7,12 +7,12 @@
 # longer imports on 2025.5, and the declared minimum was corrected to what
 # is actually tested.
 #
-# pytest-homeassistant-custom-component 0.13.272 ships homeassistant 2025.8.3
+# pytest-homeassistant-custom-component 0.13.320 ships homeassistant 2026.3.4
 # (the last patch of the declared minimum release). Keep this pin and the
 # hacs.json minimum in lockstep - the contract test
 # test_the_declared_home_assistant_minimum_is_the_tested_minimum fails when
 # they drift apart.
-pytest-homeassistant-custom-component==0.13.272
+pytest-homeassistant-custom-component==0.13.320
 freezegun
 # Home Assistant 2025.8 pins aiodns 3.5.0, whose class-level annotations
 # reference pycares attributes that pycares 5.x removed (AttributeError at

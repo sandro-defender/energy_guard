@@ -90,13 +90,13 @@ def test_hacs_metadata_points_at_the_component() -> None:
 
 
 #: The oldest Home Assistant the suite verifies. requirements_test_min.txt
-#: pins pytest-homeassistant-custom-component 0.13.272, which ships
-#: homeassistant 2025.8.3 (the last patch of the declared minimum release),
+#: pins pytest-homeassistant-custom-component 0.13.320, which ships
+#: homeassistant 2026.3.4 (the last patch of the declared minimum release),
 #: and the CI "verified minimum" job runs the whole suite against it. The
 #: minimum is 2025.8 because options_flow.py subclasses OptionsFlowWithReload,
 #: which Home Assistant added in 2025.8 (home-assistant/core#146910).
-TESTED_MINIMUM_HOME_ASSISTANT = "2025.8.0"
-MINIMUM_HARNESS_PIN = "pytest-homeassistant-custom-component==0.13.272"
+TESTED_MINIMUM_HOME_ASSISTANT = "2026.3.0"
+MINIMUM_HARNESS_PIN = "pytest-homeassistant-custom-component==0.13.320"
 
 
 def test_the_declared_home_assistant_minimum_is_the_tested_minimum() -> None:
@@ -296,6 +296,43 @@ def test_translations_match_strings(strings: dict) -> None:
     """translations/en.json is the English source of truth, not a stale copy."""
     translations = json.loads((COMPONENT_DIR / "translations" / "en.json").read_text())
     assert translations == strings
+
+
+def _string_key_paths(node: dict, prefix: str = "") -> set[str]:
+    """Return the dotted paths of every leaf string in a nested dict."""
+    paths: set[str] = set()
+    for key, value in node.items():
+        if isinstance(value, dict):
+            paths |= _string_key_paths(value, f"{prefix}{key}.")
+        else:
+            paths.add(f"{prefix}{key}")
+    return paths
+
+
+def test_every_translation_file_covers_exactly_the_string_keys(
+    strings: dict,
+) -> None:
+    """Every translations/*.json mirrors the key structure of strings.json.
+
+    Home Assistant falls back to English per missing key, but a missing key
+    means the language silently regresses to English, and an extra key means
+    a stale translation nobody will ever see. Keep this strict: adding a
+    string to strings.json forces every language file to follow, so a file
+    can only ship complete or fail CI.
+    """
+    expected = _string_key_paths(strings)
+    files = sorted((COMPONENT_DIR / "translations").glob("*.json"))
+    assert files, "translations/ must contain at least one language file"
+    for path in files:
+        keys = _string_key_paths(json.loads(path.read_text()))
+        missing = expected - keys
+        extra = keys - expected
+        assert not missing, (
+            f"{path.name} misses {len(missing)} key(s), e.g. {sorted(missing)[:5]}"
+        )
+        assert not extra, (
+            f"{path.name} has {len(extra)} unknown key(s), e.g. {sorted(extra)[:5]}"
+        )
 
 
 def test_readme_mentions_every_service_and_the_worked_example() -> None:
