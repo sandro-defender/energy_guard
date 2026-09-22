@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Energy Guard brand icon - the "guarding energy" mark.
+  A shield (protection) holding a lightning bolt (energy). Single source of
+  truth for the brand artwork; the PNG densities in this folder
+  (icon.png / icon@2x.png / logo.png / logo@2x.png) are rasterised from it.
+  The path below is drawn on a 0 0 512 512 canvas so it stays crisp at every
+  density. The same geometry (scaled to a 24x24 grid) is what the custom
+  "energy_guard:shield" icon set, the panel sidebar and the README use.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="eg-shield" x1="80" y1="48" x2="432" y2="488" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#41BDF5"/>
+      <stop offset="1" stop-color="#1F8FCE"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#eg-shield)" fill-rule="evenodd" d="
+    M256 48
+    L432 104
+    L432 280
+    C432 384 360 448 256 488
+    C152 448 80 384 80 280
+    L80 104
+    Z"/>
+  <path fill="#FFFFFF" fill-rule="evenodd" d="
+    M292 140
+    L176 296
+    L252 296
+    L216 388
+    L336 228
+    L260 228
+    Z"/>
+</svg>
