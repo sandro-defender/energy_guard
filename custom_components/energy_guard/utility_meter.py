@@ -131,15 +131,16 @@ async def async_calibrate_utility_meter(
                 "'source_entity_id' (a cumulative source to calculate it from)."
             )
         target = source_value - (baseline or 0.0)
+        if source_entity_id:
+            source_state = hass.states.get(source_entity_id)
+            source_unit = (
+                source_state.attributes.get("unit_of_measurement")
+                if source_state is not None
+                else None
+            )
+            if source_unit and source_unit != unit:
+                target = convert(target, source_unit, unit)
     target = round(float(target), 6)
-
-    source_unit = None
-    if source_entity_id:
-        source_unit = hass.states.get(source_entity_id).attributes.get(
-            "unit_of_measurement"
-        )
-        if source_unit and source_unit != unit:
-            target = round(convert(target, source_unit, unit), 6)
 
     delta = None if current_value is None else round(target - current_value, 6)
     result: dict[str, Any] = {

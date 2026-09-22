@@ -71,7 +71,7 @@ def prune_backups(directory: Path, keep: int) -> None:
     try:
         files = sorted(
             directory.glob("statistics_backup_*.json"),
-            key=lambda item: item.stat().st_mtime,
+            key=lambda item: (item.stat().st_mtime, item.name),
             reverse=True,
         )
     except OSError:  # pragma: no cover - filesystem race

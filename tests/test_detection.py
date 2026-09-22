@@ -206,6 +206,11 @@ async def test_scan_truncates_a_range_longer_than_a_year(hass: HomeAssistant) ->
         return_response=True,
     )
     assert any("longer than one year" in warning for warning in result["warnings"])
+    start_time = dt_util.parse_datetime(result["start_time"])
+    end_time = dt_util.parse_datetime(result["end_time"])
+    assert start_time is not None
+    assert end_time is not None
+    assert (end_time - start_time) <= timedelta(days=367)
 
 
 async def test_scan_warns_about_unknown_statistics(hass: HomeAssistant) -> None:
@@ -246,3 +251,19 @@ def test_fingerprint_is_stable_and_timezone_aware() -> None:
     assert fingerprint("sensor.x", moment, -1.5, "kWh") != fingerprint(
         "sensor.x", moment, -1.6, "kWh"
     )
+
+
+def test_as_utc_handles_naive_and_aware_datetimes() -> None:
+    """as_utc converts naive and aware datetimes, strings, and numbers to UTC."""
+    from custom_components.energy_guard.recorder_io import as_utc
+
+    naive = datetime(2026, 9, 20, 12, 0, 0)
+    utc = as_utc(naive)
+    assert utc is not None
+    assert utc.tzinfo is not None
+
+    aware = datetime(2026, 9, 20, 12, 0, 0, tzinfo=UTC)
+    assert as_utc(aware) == aware
+    assert as_utc(None) is None
+    assert as_utc(True) is None
+    assert as_utc("2026-09-20T12:00:00+00:00") == aware

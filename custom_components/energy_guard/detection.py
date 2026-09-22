@@ -302,6 +302,7 @@ async def async_scan(
             "The requested range is longer than one year and was truncated."
         )
         start = end - timedelta(hours=MAX_SCAN_HOURS)
+        result.start = start
 
     if not recorder_is_available(hass):
         result.recorder_available = False

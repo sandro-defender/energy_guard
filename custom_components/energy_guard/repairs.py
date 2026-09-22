@@ -51,7 +51,7 @@ async def async_sync_repair_issues(hass: HomeAssistant, hub: EnergyGuardHub) -> 
             hass, DOMAIN, f"{ISSUE_STATISTICS_OFFSET}_{hub.entry.entry_id}"
         )
 
-    if hub.has_open_issues():
+    if hub.anomaly_count > 0:
         events = hub.events_since(hub.issue_window_start)
         ir.async_create_issue(
             hass,
