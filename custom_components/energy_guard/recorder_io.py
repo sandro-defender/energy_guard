@@ -172,7 +172,7 @@ def as_utc(value: datetime | str | float | int | None) -> datetime | None:
             return None
         value = parsed
     if value.tzinfo is None:
-        value = dt_util.DEFAULT_TIME_ZONE.localize(value)
+        value = value.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
     return dt_util.as_utc(value)
 
 

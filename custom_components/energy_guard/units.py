@@ -28,7 +28,7 @@ def _ha_energy_converter() -> object | None:
         from homeassistant.util.unit_conversion import EnergyConverter
 
         _HA_CONVERTER = EnergyConverter
-    except ImportError:  # pragma: no cover
+    except (ImportError, Exception):  # pragma: no cover
         _HA_CONVERTER = None
     return _HA_CONVERTER
 

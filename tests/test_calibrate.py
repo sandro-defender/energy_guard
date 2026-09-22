@@ -209,3 +209,21 @@ async def test_calibrate_requires_a_value_or_a_source(hass: HomeAssistant) -> No
 
     with pytest.raises(ServiceValidationError):
         await _calibrate(hass, entity_id=METER, confirm=True)
+
+
+async def test_calibrate_exact_value_preserves_target_unit_with_source(
+    hass: HomeAssistant,
+) -> None:
+    """An exact value is not converted using source_entity_id unit."""
+    await _setup(hass)
+    hass.states.async_set("sensor.source_wh", "500000", {"unit_of_measurement": "Wh"})
+    result = await _calibrate(
+        hass,
+        entity_id=METER,
+        value=500.0,
+        source_entity_id="sensor.source_wh",
+        confirm=True,
+    )
+    assert result["status"] == "calibrated"
+    assert result["target_value"] == pytest.approx(500.0)
+    assert float(hass.states.get(METER).state) == pytest.approx(500.0, abs=0.01)
